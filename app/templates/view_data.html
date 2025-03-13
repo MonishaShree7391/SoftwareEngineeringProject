@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Data</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<style>
+    .container {
+        margin-top: 20px;
+    }
+    .bill-details {
+        margin-bottom: 20px;
+    }
+    .form-section {
+        border-left: 1px solid #ccc;
+        padding-left: 20px;
+        margin-left: 20px;
+    }
+    .form-section, .upload-section {
+        flex: 1;
+        border: 1px solid #ccc;
+        box-shadow: 2px 2px 2px rgba(0,0,0,0.1);
+    }
+</style>
+<body>
+    <div class="container">
+        <h1>Data for {{ selected_date }}</h1>
+        <div class="row">
+            <div class="col-md-9">
+                <div class="bill-details">
+                    <div>
+                        <strong>Bill ID:</strong> {{ bill_info }}<br>
+                        <strong>Total Sum:</strong> {{ TotalSum_info }}<br>
+                    </div>
+                    <div>
+                        <strong>Address:</strong> {{ address_info }}<br>
+                        <strong>Date:</strong> {{ date_info }}<br>
+                    </div>
+                </div>
+
+                {% if message %}
+                    <p>{{ message }}</p>
+                {% else %}
+                    <table class="table table-striped mt-3">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Quantity</th>
+                                <th>Price</th>
+                                <th>Assign</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in data_list %}
+                                <tr>
+                                    <td>{{ row.Item }}</td>
+                                    <td>{{ row.Quantity }}</td>
+                                    <td>{{ row.Price }}</td>
+                                    <td>
+                                        <form action="{{ url_for('main.assign_item') }}" method="post">
+                                            <input type="hidden" name="item_id" value="{{ row.id }}">
+                                            <select name="assignment" class="form-control">
+                                                <option value="Partner1" {% if row.assignment =='Partner1' %}selected{% endif %}>Partner1</option>
+                                                <option value="Partner2" {% if row.assignment =='Partner2' %}selected{% endif %}>Partner2</option>
+                                                <option value="Both" {% if row.assignment =='Both' %}selected{% endif %}>Both</option>
+                                                <option value="With Friends" {% if row.assignment =='WithFriends'%}selected{% endif %}>With Friends</option>
+                                            </select>
+                                            <button type="submit" class="btn btn-primary btn-sm mt-2">Assign</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+            </div>
+
+            <div class="form-section">
+                <h2>View Invoices</h2>
+                <form id="view-form" action="{{ url_for('main.view_data_by_date') }}" method="get">
+                    <div class="form-group">
+                        <label for="date">Select Date:</label>
+                        <input type="date" id="date" name="date" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">View Data</button>
+                </form>
+            </div>
+
+            <div class="upload-section" id="upload-section">
+                <h2>Upload a PDF</h2>
+                <form id="upload-form" action="{{ url_for('main.upload_file') }}" method="post" enctype="multipart/form-data">
+                    <label for="filename">Filename:</label>
+                    <input type="text" id="filename" name="filename" required><br><br>
+
+                    <label for="month">Month:</label>
+                    <input type="text" id="month" name="month" required><br><br>
+
+                    <label for="month">Year:</label>
+                    <input type="text" id="year" name="year" required><br><br>
+
+                    <input type="file" name="file" required><br><br>
+                    <input type="submit" value="Upload">
+                </form>
+            </div>
+            <a href="{{ url_for('user.logout') }}">Logout</a>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var selectedDate = sessionStorage.getItem('selectedDate');
+            if (selectedDate) {
+                document.getElementById('date').value = selectedDate;
+            }
+        });
+
+        document.getElementById('view-form').addEventListener('submit', function(event) {
+            var selectedDate = document.getElementById('date').value;
+            sessionStorage.setItem('selectedDate', selectedDate);
+        });
+    </script>
+</body>
+</html>

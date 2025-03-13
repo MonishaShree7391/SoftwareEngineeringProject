@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Split Invoice</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        .container {
+            margin-top: 20px;
+        }
+        .left-section {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 2px 2px 12px rgba(0, 0, 0, 0.1);
+        }
+        .right-section {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 2px 2px 12px rgba(0, 0, 0, 0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+            width: 100%;
+        }
+        .shareWithCheckboxes label {
+            display: block;
+        }
+        .table th, .table td {
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Bill ID Heading -->
+        <h1 class="text-center">Bill ID: {{ bill_info }}</h1>
+
+        <div class="row mt-4">
+            <!-- Left Section (Split Invoice, Add New User, Paid By) -->
+            <div class="col-md-4 left-section">
+                <h2>Split Invoice</h2>
+
+                <!-- Select Users to Split With -->
+                <div class="form-group">
+                    <label for="userSelection">Select Users to Split With:</label>
+                    <select id="userSelection" class="form-control" multiple>
+                        {% for user in split_invoice_users %}
+                            <option value="{{ user.email }}">{{ user.name }}</option>
+                        {% endfor %}
+                        <option value="{{ logged_in_user.email }}" selected>{{ logged_in_user.name }} (You)</option>  <!-- Using userid -->
+                    </select>
+                    <button type="button" class="btn btn-secondary mt-2" id="addUsersButton">Add Selected Users</button>
+                </div>
+
+                <!-- Add New User -->
+                <div class="form-section">
+                    <h3>Add New User</h3>
+                    <form id="addUserForm" action="{{ url_for('main.add_split_invoice_user') }}" method="post">
+                        <div class="form-group">
+                            <label for="email">Email:</label>
+                            <input type="email" id="email" name="email" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="name">Name:</label>
+                            <input type="text" id="name" name="name" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add User</button>
+                    </form>
+                </div>
+
+                <!-- Paid By Dropdown -->
+                <form id="splitInvoiceForm" method="POST" action="{{ url_for('main.split_invoice') }}">
+                    <div class="form-group">
+                        <label for="paidBy">Paid By:</label>
+                        <select id="paidBy" name="paidBy" class="form-control" required>
+                            {% for user in split_invoice_users %}
+                                <option value="{{ user.email }}">{{ user.name }}</option>  <!--  Using email -->
+                            {% endfor %}
+                            <option value="{{ logged_in_user.email }}" selected>{{ logged_in_user.name }} (You)</option>  <!--  Using userid -->
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </form>
+            </div>
+
+            <!-- Right Section (Items to Split) -->
+            <div class="col-md-8 right-section">
+                <h2>Items to Split</h2>
+
+                <!-- Table for Items -->
+                <table class="table table-striped mt-3">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Quantity</th>
+                            <th>Price</th>
+                            <th>Share With</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in items_data %}
+                            <tr>
+                                <td>{{ row.item }}</td>
+                                <td>{{ row.quantity }}</td>
+                                <td>{{ row.price }}</td>
+                                <td>
+                                    <div class="shareWithCheckboxes" id="shareWithContainer_{{ loop.index }}">
+                                        <!-- Checkboxes will be added dynamically -->
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <!-- Split Bill Button -->
+                <div class="mt-3">
+                    <button type="button" class="btn btn-primary" id="splitBillButton">Split Bill</button>
+                </div>
+            </div>
+        </div>
+    </div>
+     <script>
+            document.addEventListener('DOMContentLoaded', function () {
+    console.log("JavaScript Loaded - Debugging Started");
+
+    const addUsersButton = document.getElementById('addUsersButton');
+    const userSelection = document.getElementById('userSelection');
+    const addUserForm = document.getElementById('addUserForm');
+    const emailInput = document.getElementById('email');
+    const nameInput = document.getElementById('name');
+    const paidBySelection = document.getElementById('paidBy');
+
+   // Function to add selected users as checkboxes in the "Share With" column
+function addUsersToItems(selectedUsers) {
+    const rows = document.querySelectorAll('.table tbody tr');
+
+    rows.forEach((row, index) => {
+        const shareWithContainer = row.querySelector('.shareWithCheckboxes');
+
+        if (!shareWithContainer) return;
+
+        selectedUsers.forEach(user => {
+            // Check if a checkbox for this user already exists
+            if (!shareWithContainer.querySelector(`input[value="${user.email}"]`)) {
+                const checkboxLabel = document.createElement('label');
+                checkboxLabel.classList.add('d-block'); // Ensure proper spacing
+                checkboxLabel.innerHTML = `
+                    <input type="checkbox" name="shareWithItem_${index + 1}" value="${user.email}" checked>
+                    ${user.name}
+                `;
+                shareWithContainer.appendChild(checkboxLabel);
+            }
+        });
+    });
+}
+
+    // Event listener for the "Add Selected Users" button
+    addUsersButton.addEventListener('click', function () {
+        const selectedOptions = Array.from(userSelection.selectedOptions);
+        const selectedUsers = selectedOptions.map(option => ({
+            email: option.value,
+            name: option.text
+        }));
+        addUsersToItems(selectedUsers); // Add checkboxes without removing existing ones
+    });
+
+    // Handle the "Add New User" form submission
+    addUserForm.addEventListener('submit', function (event) {
+        event.preventDefault();
+
+        const formData = new FormData(addUserForm);
+
+        fetch("{{ url_for('main.add_split_invoice_user') }}", {
+            method: 'POST',
+            body: formData,
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Add the new user to the "Select Users to Split With" dropdown
+                const newOption = document.createElement('option');
+                newOption.value = formData.get('email');
+                newOption.text = formData.get('name');
+                userSelection.appendChild(newOption);
+
+                // Add the new user to the "Paid By" dropdown
+                const newPaidByOption = document.createElement('option');
+                newPaidByOption.value = formData.get('email');
+                newPaidByOption.text = formData.get('name');
+                paidBySelection.appendChild(newPaidByOption);
+
+                // Clear the form
+                addUserForm.reset();
+                alert('New user added successfully!');
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while adding the user.');
+        });
+    });
+
+    // Function to send a split request with optional overwrite
+    function sendSplitRequest(overwrite = false) {
+        const selectedUsersPerItem = [];
+        const items = [];
+        const rows = document.querySelectorAll('.table tbody tr');
+        const paidBy = paidBySelection.value;
+
+        rows.forEach(row => {
+            const item = row.cells[0].innerText; // First column is the item name
+            items.push(item);
+
+            const selectedUsers = Array.from(row.querySelectorAll('.shareWithCheckboxes input[type="checkbox"]:checked'))
+                .map(checkbox => checkbox.value);
+            selectedUsersPerItem.push(selectedUsers);
+        });
+
+        console.log("Paid By:", paidBy);
+        console.log("Items:", items);
+        console.log("Shared With:", selectedUsersPerItem);
+
+        fetch("{{ url_for('main.split_invoice') }}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                paid_by: paidBy,
+                items: items,
+                shared_with: selectedUsersPerItem,
+                overwrite: overwrite
+            }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.split_exists) {
+                if (confirm('This bill is already split. Do you want to overwrite the previous split?')) {
+                    sendSplitRequest(true); // Resend request with overwrite flag
+                }
+            } else if (data.success) {
+                alert('Bill split successfully!');
+                window.location.href = "{{ url_for('main.view_data') }}";
+            } else {
+                alert('Error splitting bill: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+    // Event listener for the "Split Bill" button
+    document.getElementById('splitBillButton').addEventListener('click', function () {
+        sendSplitRequest();
+    });
+});
+
+
+</script>
+
+    <!-- Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

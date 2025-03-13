@@ -1,0 +1,438 @@
+/* Background for all pages */
+body {
+    font-family: Arial, sans-serif;
+    background-image: url("/static/images/dashboard_pink_resized.png");
+    background-size: cover; /* Ensures the image covers the entire screen */
+    background-repeat: no-repeat; /* Prevents repeating */
+    background-position: center center; /* Centers the image */
+    background-attachment: fixed;
+    height: 100vh; /* Ensures the body takes up the full viewport height */
+    margin: 10;
+    padding: 0;
+}
+
+/* Additional Styling for Signup & Login */
+.signup-container, .login-container {
+    background: rgba(255, 255, 255, 0.8); /* Slight white overlay for better readability */
+    padding: 30px;
+    border-radius: 10px;
+    width: 400px;
+    text-align: center;
+    margin: auto;
+    margin-top: 50px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+}
+/* Centering the login form */
+.login-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 255, 255, 0.8); /* White with transparency */
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3); /* Soft shadow effect */
+    text-align: center;
+    width: 380px;
+}
+
+/* Style inputs */
+.login-container input {
+    width: 90%;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+/* Style button */
+.login-container button {
+    width: 100%;
+    padding: 10px;
+    background-color: #ffc5c5; /* Green color */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.login-container button:hover {
+    background-color: #c4666c; /* Darker green */
+}
+
+/* Style the link */
+.login-container p a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+.login-container p a:hover {
+    text-decoration: underline;
+}
+.login-logo {
+    width: 180px; /* Make it larger */
+    height: 180px;
+    border-radius: 50%; /* Circular shape */
+    object-fit: cover; /* Ensure it covers the area properly */
+    display: block;
+    margin: 0 auto 15px;
+}
+.signup-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 255, 255, 0.8); /* White with transparency */
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3); /* Soft shadow effect */
+    text-align: left;
+    width: 380px;
+}
+.signup-container input {
+    width: 90%;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    text-align: left;
+}
+.signup-container button {
+    width: 100%;
+    padding: 10px;
+    background-color: #ffc5c5; /* pink color */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+}
+.signup-container button:hover {
+    background-color: #c4666c; /* Darker pink */
+}
+
+/* Style the link */
+.signup-container p a {
+    color: #007bff;
+    text-decoration: none;
+}
+.signup-container p a:hover {
+    text-decoration: underline;
+}
+.signup-logo {
+    width: 200px; /* Make it larger */
+    height: 200px;
+    border-radius: 50%; /* Circular shape */
+    object-fit: cover; /* Ensure it covers the area properly */
+    display: block;
+    margin: 0 auto 15px;
+}
+.dashboard-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    max-width: 800px;
+    margin: 20px auto;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    text-align: left; /* Ensures text alignment is consistent */
+    transform: translate(-50%, -50%);
+    /*background: rgba(255, 255, 255, 0.8);*/
+}
+
+/* Headings styling */
+h1 {
+    color: #333;
+    text-align: center;
+}
+h2 {
+    font-size: 0.8rem;
+}
+h4,h5
+{
+    font-size: 0.98rem;
+    text-align: center;
+}
+/* Options section styling */
+.options {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.options h2 {
+    margin-top: 0;
+}
+
+/* Button styling */
+.dashboard-container button {
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-right: 10px;
+    border: none;
+    background-color: #e1a1a1;
+    color: #fff;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+}
+
+.dashboard-container button:hover {
+    background-color: #c4666c;
+}
+
+/* Form styling */
+.dashboard-container form {
+    margin-top: 20px;
+}
+
+/* Labels */
+.dashboard-container label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+/* Input fields styling */
+.dashboard-container input[type="text"],
+.dashboard-container input[type="file"],
+.dashboard-container input[type="date"],
+.dashboard-container input[type="submit"] {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+
+}
+.dashboard-container input[type="file"] {
+    background-color: #e1a1a1;
+    color: #fff;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.dashboard-container input[type="file"]:hover {
+    background-color: #c4666c;
+}
+/* Submit button styling */
+.dashboard-container input[type="submit"] {
+    background-color: #e1a1a1;
+    color: #fff;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.dashboard-container input[type="submit"]:hover {
+    background-color: #c4666c;
+}
+
+/* Message styling */
+.message {
+    margin-top: 10px;
+    font-weight: bold;
+}
+
+/* Error message styling */
+.error {
+    color: red;
+}
+
+/* Success message styling */
+.success {
+    color: green;
+}
+
+/* Toggle sections */
+#upload-section, #view-section {
+    display: none;
+    margin-top: 20px;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+}
+
+/* Logout link */
+.dashboard-container a {
+    display: block;
+    text-align: center;
+    margin-top: 20px;
+    color: #007bff;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.dashboard-container a:hover {
+    text-decoration: underline;
+}
+.container {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* View Invoices Box */
+.view-invoices-container {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 2px 2px 12px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+/* Upload PDF Box */
+.upload-pdf-container {
+    background: rgba(255, 255, 255, 0.95); /* Slight transparency */
+    padding: 10px;
+    border-radius: 10px;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    text-align: left;
+}
+
+.upload-pdf-container h2 {
+    font-size: 22px;
+    margin-bottom: 15px;
+}
+
+.upload-pdf-container input[type="text"],
+.upload-pdf-container input[type="date"],
+.upload-pdf-container input[type="file"],
+.upload-pdf-container .custom-btn {
+    width: 100%;
+    padding: 2px;
+    margin-bottom: 2px;
+    border: 1px solid #ccc;
+    border-radius: 2px;
+    box-sizing: border-box;
+}
+
+/* Fixing the filename button spacing */
+#check-filename-btn {
+    width: 100%;
+    padding: 5px;
+    background-color: #e1a1a1;
+    border: 1px solid #fff;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+#check-filename-btn:hover {
+    background-color: #c4666c;
+}
+/* Buttons */
+.btn-primary ,.btn-secondary mt-2{
+    background-color: #e1a1a1;
+    border: none;
+    width: 30%;
+    transition: 0.3s;
+}
+
+.btn-primary:hover {
+    background-color: #c4666c;
+}
+
+/* "OR" Text */
+p {
+    text-align: center;
+    font-weight: bold;
+    color: #555;
+}
+.custom-btn {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+    text-align: center;
+    color: #fff;
+    background-color: #e1a1a1; /* Green */
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.custom-btn:hover {
+    background-color: #c4666c; /* Darker green */
+}
+.bill-details {
+    background: rgba(255, 255, 255, 0.95); /* White background with slight transparency */
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 2px 2px 12px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 1000px; /* Prevents it from stretching too wide */
+    margin-bottom: 20px;
+}
+
+/* Flexbox for proper alignment */
+.bill-details .detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    flex-wrap: wrap; /* Allows wrapping if needed */
+}
+
+/* Ensures field names are aligned */
+.bill-details strong {
+    width: 120px; /* Keeps labels aligned */
+    text-align: left;
+    font-weight: bold;
+    color: #333;
+}
+
+/* Ensures values stay aligned and prevent breaking */
+.bill-details span {
+    flex-grow: 1;
+    text-align: left;
+    color: #555;
+    white-space: nowrap; /* Prevents text from wrapping */
+    overflow: hidden; /* Prevents overflow */
+    text-overflow: ellipsis; /* Adds "..." if text is too long */
+}
+
+/* Special case for address: allows it to stay on one line */
+.bill-details .detail-row.full-width span {
+    white-space: normal; /* Allows wrapping if necessary */
+    word-break: break-word; /* Ensures proper word wrapping */
+}
+.btn-secondary{
+    background-color: #e1a1a1;
+    border: none;
+    width: 60%;
+    transition: 0.3s;
+}
+.btn-secondary:hover {
+    background-color: #c4666c; /* Darker green */
+}
+.balance-card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+.balance-card .card-header {
+            background-color: #807271;
+            color: white;
+            border-radius: 10px 10px 0 0;
+}
+.balance-card .card-body {
+            padding: 20px;
+}
+.table th, .table td {
+            vertical-align: middle;
+        }
+.table thead th {
+            background-color: #E3CBC9;
+            color: white;
+        }
+.no-data {
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+}

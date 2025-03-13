@@ -1,0 +1,20 @@
+/shelf/
+/workspace.xml
+.env
+/app/config
+config.py
+db.properties	
+venv/
+static/uploads/
+static/json/
+static/images/
+.vscode/
+.idea/
+# Logs & debug
+*.log
+debug.log
+logs/
+__pycache__/
+*.pyc
+*.pyo
+/flask_sessions

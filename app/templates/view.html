@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Data</title>
+    <!-- Bootstrap CSS for styling the table and layout -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+
+</head>
+<body>
+    <div class="container">
+        <h1>Data for {{ selected_date }}</h1>
+        <div class="row">
+            <!-- Left column for the table -->
+            <div class="col-md-9">
+                <!-- Display bill_id, address, and total_sum -->
+                <div class="bill-details">
+                    <div class="detail-row">
+                        <strong>Bill ID:</strong> <span>{{ bill_info }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <strong>Total Sum:</strong> <span>{{ totalSum_info }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <strong>Shop:</strong> <span>{{ ShopName }}</span>
+                    </div>
+                    <div class="detail-row full-width">
+                        <strong>Address:</strong> <span>{{ address_info }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <strong>Date:</strong> <span>{{ date_info }}</span>
+                    </div>
+                    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#splitBillModal">
+                        Split Bill
+                    </button>
+                </div>
+
+
+                <!-- Display debt settlement details in a table -->
+                <h3>Split Details</h3>
+                <table class="table table-striped mt-3">
+                    <thead>
+                        <tr>
+                            <th>Paid By</th>
+                            <th>Owed By</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for detail in debt_settlement_details %}
+                            <tr>
+                                <td>{{ detail.paid_by_name }}</td>
+                                <td>{{ detail.owed_by_name }}</td>
+                                <td>{{ detail.amount }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <!-- Table to display item details -->
+                <table class="table table-striped mt-3">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Quantity</th>
+                            <th>Price</th>
+                            {% if items_data and items_data[0].shared_with %}
+                                <th>Shared With</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in items_data %}
+                            <tr>
+                                <td>{{ row.item }}</td>
+                                <td>{{ row.quantity }}</td>
+                                <td>{{ row.price }}</td>
+                                {% if row.shared_with %}
+                                    <td>{{ row.shared_with }}</td>
+                                {% elif items_data and items_data[0].shared_with %}
+                                    <td></td>
+                                {% endif %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+
+                <!-- Display no records found message if no data is available -->
+                {% if not items_data %}
+                    <p>No records found for the selected date.</p>
+                {% endif %}
+            </div>
+
+            <!-- Right column for the form -->
+            <div class="col-md-3 ">
+                <div class="view-invoices-container">
+                <div class="form-section">
+                    <h2>View Invoices</h2>
+                    <form id="view-form" action="{{ url_for('main.view_data_by_date') }}" method="get">
+                        <div class="form-group">
+                            <label for="date">Select Date:</label>
+                            <input type="date" id="date" name="date" class="form-control" required>
+                        </div>
+                            <button type="submit" class="custom-btn">View Data</button>
+                        </form>
+                    </div>
+                </div>
+
+                <p>OR</p>
+                <div class="upload-pdf-container">
+                    <h2>Upload a PDF</h2>
+                    <form id="upload-form" action="{{ url_for('main.upload_file') }}" method="post" enctype="multipart/form-data">
+                        <label for="filename">Filename:</label>
+                        <input type="text" id="filename" name="filename" required>
+
+                        <button type="button" id="check-filename-btn">Check Filename</button>
+                        <div id="filename-check-message" class="message"></div><br><br>
+
+                        <label for="datePicker">Select Date:</label>
+                        <input type="date" id="datePicker" name="datePicker" required><br><br>
+
+                        <!-- Hidden fields for month and year -->
+                        <input type="hidden" id="month" name="month">
+                        <input type="hidden" id="year" name="year">
+
+                        <label for="NameOfTheShop">Shop Name:</label>
+                        <input type="text" id="NameOfTheShop" name="NameOfTheShop" required><br><br>
+
+                        <input type="file" name="file" required><br><br>
+
+                        <button type="submit" class="custom-btn">Upload</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Split Bill Modal -->
+    <div class="modal fade" id="splitBillModal" tabindex="-1" aria-labelledby="splitBillModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="splitBillModalLabel">Split Bill</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <!-- Display bill details -->
+                    <p><strong>Bill ID:</strong> {{ bill_info }}</p>
+                    <p><strong>Total Sum:</strong> {{ TotalSum_info }}</p>
+                    <p><strong>Address:</strong> {{ address_info }}</p>
+                    <p><strong>Date:</strong> {{ date_info }}</p>
+                    <p>Would you like to split the bill?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">No</button>
+                    <a href="{{ url_for('main.split_invoice') }}" class="btn btn-primary">Yes</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS for responsiveness (Optional) -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script>
+        // Feature 5: Fetch month and year from the calendar view
+         // Store the selected date in sessionStorage to retain it after page reloads
+            document.getElementById("datePicker").addEventListener("change", function() {
+            const selectedDate = new Date(this.value);
+            if (!selectedDate || isNaN(selectedDate)) {
+            alert("Please select a valid date.");
+            return;
+            }
+            const month = selectedDate.toLocaleString('default', { month: 'long' }).toLowerCase();
+            const year = selectedDate.getFullYear();
+
+            // Set the values in hidden fields
+            document.getElementById("month").value = month;
+            document.getElementById("year").value = year;
+            console.log("Selected Month:", month, "Selected Year:", year);
+        });
+        document.getElementById("upload-form").addEventListener("submit", function(event) {
+        const filename = document.getElementById("filename").value;
+        const NameOfTheShop = document.getElementById("NameOfTheShop").value;
+        const month = document.getElementById("month").value;
+        const year = document.getElementById("year").value;
+
+        if (!filename || !NameOfTheShop || !month || !year) {
+            alert("Please fill all required fields before uploading.");
+            event.preventDefault(); // Stop form submission
+            return;
+        }
+
+        console.log("Form Submitted with:", { filename, NameOfTheShop, month, year });
+    });
+        // Feature 4: Check if the filename already exists
+        document.getElementById("check-filename-btn").addEventListener("click", function() {
+            const filename = document.getElementById("filename").value;
+            if (!filename) {
+                alert("Please enter a filename.");
+                return;
+            }
+
+            fetch("/check_filename", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                body: `filename=${filename}`,
+            })
+            .then(response => response.json())
+            .then(data => {
+                const messageDiv = document.getElementById("filename-check-message");
+                if (data.exists) {
+                    messageDiv.textContent = "Filename already exists.";
+                    messageDiv.className = "message error";
+                } else {
+                    messageDiv.textContent = "Filename is available.";
+                    messageDiv.className = "message success";
+                }
+            })
+            .catch(error => {
+                console.error("Error checking filename:", error);
+            });
+        });
+    </script>
+</body>
+</html>

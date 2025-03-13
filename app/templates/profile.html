@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>User Profile</title>
+    <!-- Add any necessary CSS css or links -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .profile-info {
+            margin-bottom: 20px;
+        }
+        .profile-info label {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>User Profile</h1>
+    <div class="profile-info">
+        <label>Username:</label>
+        <span>{{ user.username }}</span>
+    </div>
+    <div class="profile-info">
+        <label>First Name:</label>
+        <span>{{ user.firstname }}</span>
+    </div>
+    <div class="profile-info">
+        <label>Last Name:</label>
+        <span>{{ user.lastname }}</span>
+    </div>
+
+
+    <a href="{{ url_for('user.logout') }}">Logout</a>
+</body>
+</html>

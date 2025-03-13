@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Balances</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <!-- Balance Summary Card -->
+                <div class="card balance-card mb-4">
+                    <div class="card-header">
+                        <h4 class="mb-0">Balance Summary</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="alert alert-success">
+                                    <h2>Total Money Owed to You</h2>
+                                    <p class="h4">{{ total_money_owed }}</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="alert alert-warning">
+                                    <h5>Total Money You Owe</h5>
+                                    <p class="h4">{{ total_money_borrowed }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Money You Owe Section -->
+                <div class="card balance-card mb-4">
+                    <div class="card-header">
+                        <h4 class="mb-0">Money You Owe</h4>
+                    </div>
+                    <div class="card-body">
+                        {% if owed_details %}
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for detail in owed_details %}
+                                        <tr>
+                                            <td>{{ detail.name }}</td>
+                                            <td>{{ detail.email }}</td>
+                                            <td>{{ detail.amount }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        {% else %}
+                            <p class="no-data">No outstanding debts where you owe money.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Money Owed to You Section -->
+                <div class="card balance-card mb-4">
+                    <div class="card-header">
+                        <h4 class="mb-0">Money Owed to You</h4>
+                    </div>
+                    <div class="card-body">
+                        {% if borrowed_details %}
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for detail in borrowed_details %}
+                                        <tr>
+                                            <td>{{ detail.name }}</td>
+                                            <td>{{ detail.email }}</td>
+                                            <td>{{ detail.amount }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        {% else %}
+                            <p class="no-data">No outstanding debts where others owe you money.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

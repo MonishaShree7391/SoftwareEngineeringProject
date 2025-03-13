@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+</head>
+<body>
+    <div class="login-container">
+        <img src="{{ url_for('static', filename='images/LOGO_SiranthaRechnunSplit.jpg') }}" alt="Logo" class="login-logo">
+
+        <h2>Login</h2>
+        <form action="{{ url_for('user.login') }}" method="POST">
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username" required>
+
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+
+            <button type="submit">Login</button>
+        </form>
+
+        {% if error %}
+        <p style="color: red;">{{ error }}</p> <!-- Display error if provided -->
+        {% endif %}
+
+        <p>Don't have an account? <a href="{{ url_for('user.register') }}">Register here</a>.</p>
+    </div>
+</body>
+</html>

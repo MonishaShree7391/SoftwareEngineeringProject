@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <title>Upload PDF or View Data</title>
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .options {
+            margin-bottom: 20px;
+        }
+        .options h2 {
+            margin-top: 0;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-right: 10px;
+            border: none;
+            background-color: #007bff;
+            color: #fff;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        form {
+            margin-top: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="file"], input[type="submit"], input[type="date"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        input[type="submit"] {
+            background-color: #28a745;
+            color: #fff;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        input[type="submit"]:hover {
+            background-color: #218838;
+        }
+        .message {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .error {
+            color: red;
+        }
+        .success {
+            color: green;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <h1>Hello, {{ current_user.firstname }}!</h1>
+
+        <div class="options">
+            <h2>What would you like to do?</h2>
+            <button id="upload-btn">Upload a File</button>
+            <button id="view-btn">View Invoices</button>
+            <button id="view-balance-btn" onclick="location.href='{{ url_for('main.view_balances') }}'">View Balances</button>
+        </div>
+
+        <div id="upload-section" style="display: none;">
+            <h2>Upload a PDF</h2>
+            <form id="upload-form" action="{{ url_for('main.upload_file') }}" method="post" enctype="multipart/form-data">
+                <label for="filename">Filename:</label>
+                <input type="text" id="filename" name="filename" required>
+                <button type="button" id="check-filename-btn">Check Filename</button>
+                <div id="filename-check-message" class="message"></div><br><br>
+
+                <label for="NameOfTheShop">Shop Name:</label>
+                <input type="text" id="NameOfTheShop" name="NameOfTheShop" required><br><br>
+
+                <!-- Date Picker for Month and Year -->
+                <label>Select Date:</label>
+                <input type="date" class="date-picker" name="datePicker" required><br><br>
+
+                <!-- Hidden fields for month and year -->
+                <input type="hidden" class="month" name="month">
+                <input type="hidden" class="year" name="year">
+
+                <label for="file">Upload PDF:</label>
+                <input type="file" id="file" name="file" required><br><br>
+
+                <input type="submit" value="Upload">
+            </form>
+        </div>
+
+        <div id="view-section" style="display: none;">
+            <h2>View Invoices</h2>
+            <form id="view-form" class="form-submit" action="{{ url_for('main.view_data_by_date') }}" method="get">
+                <label>Select Date:</label>
+                <input type="date" class="date-picker" name="datePicker" required><br><br>
+
+                <!-- Hidden fields for view -->
+                <input type="hidden" class="month-field" name="month">
+                <input type="hidden" class="year-field" name="year">
+
+                <input type="submit" value="View Data">
+            </form>
+        </div>
+
+    <!----
+        <div id="view-balance-section" style="display: none;">
+            <h2>View Balances</h2>
+            <button id="view-balance-btn" onclick="location.href='{{ url_for('main.view_balances') }}'">View Balances</button>
+        </div>
+        <br>
+        <a href="{{ url_for('user.logout') }}">Logout</a>
+        !---->
+    </div>
+
+
+
+    <script>
+        // Toggle between upload and view sections
+        document.getElementById("upload-btn").addEventListener("click", function() {
+            document.getElementById("upload-section").style.display = "block";
+            document.getElementById("view-section").style.display = "none";
+        });
+
+        document.getElementById("view-btn").addEventListener("click", function() {
+            document.getElementById("upload-section").style.display = "none";
+            document.getElementById("view-section").style.display = "block";
+        });
+        document.getElementById("view-balance-btn").addEventListener("click", function() {
+            document.getElementById("view-balance-section").style.display = "block";
+        });
+
+
+        // Feature 4: Check if the filename already exists
+        document.getElementById("check-filename-btn").addEventListener("click", function() {
+            const filename = document.getElementById("filename").value;
+            if (!filename) {
+                alert("Please enter a filename.");
+                return;
+            }
+
+            fetch("/check_filename", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                body: `filename=${filename}`,
+            })
+            .then(response => response.json())
+            .then(data => {
+                const messageDiv = document.getElementById("filename-check-message");
+                if (data.exists) {
+                    messageDiv.textContent = "Filename already exists.";
+                    messageDiv.className = "message error";
+                } else {
+                    messageDiv.textContent = "Filename is available.";
+                    messageDiv.className = "message success";
+                }
+            })
+            .catch(error => {
+                console.error("Error checking filename:", error);
+            });
+        });
+
+        // Feature 5: Fetch month and year from the calendar view
+
+        function handleDateChange(event) {
+        const datePicker = event.target; // Get the element that triggered the event
+        const selectedDate = new Date(datePicker.value);
+
+        if (!selectedDate || isNaN(selectedDate)) {
+            alert("Please select a valid date.");
+            return;
+        }
+
+        const month = selectedDate.toLocaleString('default', { month: 'long' }).toLowerCase();
+        const year = selectedDate.getFullYear();
+
+        // Find corresponding hidden fields in the same form
+        const form = datePicker.closest("form");
+        if (form) {
+            const monthField = form.querySelector(".month, .month-field");
+            const yearField = form.querySelector(".year, .year-field");
+
+            if (monthField) monthField.value = month;
+            if (yearField) yearField.value = year;
+
+            console.log(`Updated Form: ${form.id} - Month: ${month}, Year: ${year}`);
+        }
+        }
+
+    function handleFormSubmit(event) {
+        const form = event.target;
+        const filename = form.querySelector(".filename-field")?.value;
+        const NameOfTheShop = form.querySelector(".shop-field")?.value;
+        const month = form.querySelector(".month-field")?.value;
+        const year = form.querySelector(".year-field")?.value;
+
+        if (!month || !year) {
+            alert("Please select a date before submitting.");
+            event.preventDefault(); // Stop form submission
+            return;
+        }
+
+        console.log(`Form Submitted: ${form.id}`, { filename, NameOfTheShop, month, year });
+    }
+
+    // Attach event listeners dynamically
+    document.querySelectorAll(".date-picker").forEach(datePicker => {
+        datePicker.addEventListener("change", handleDateChange);
+    });
+
+    document.querySelectorAll(".form-submit").forEach(form => {
+        form.addEventListener("submit", handleFormSubmit);
+    });
+
+
+    </script>
+</body>
+</html>
