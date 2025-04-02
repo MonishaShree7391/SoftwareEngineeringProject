@@ -79,6 +79,21 @@ def logout():
     logout_user()
     return redirect(url_for("user.login"))
 
+
+
+@user_bp.route('/settings', methods=['GET'])
+@login_required
+def settings():
+    return render_template("settings.html")
+
+@user_bp.route('/profile')
+@login_required
+def profile():
+    user = Users.query.get(session.get("logged_in_user")["id"])
+    return render_template("profile.html", user=user)
+
+
+
 def fetch_userdata(user):
     """
     Fetches user data from the USERDATA table using Flask-SQLAlchemy.

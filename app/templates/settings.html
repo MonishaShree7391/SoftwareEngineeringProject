@@ -1,0 +1,44 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Settings</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    {% include 'user_icon.html' %}
+
+    <div class="password-container">
+        <h2>User Settings</h2>
+
+        <form method="POST">
+            <label for="new_password">Change Password:</label>
+            <input type="password" id="new_password" name="new_password" required>
+
+            <label for="confirm_password">Enter Password again:</label>
+            <input type="password" id="confirm_password" name="confirm_password" required>
+
+            <button type="submit">Update</button>
+        </form>
+        <!---
+        <h3>Preferences</h3>
+        <label>
+            <input type="checkbox" id="email_notifications" checked> Receive email updates
+        </label>
+
+        <label>
+            <input type="checkbox" id="dark_mode"> Enable dark mode
+        </label>
+        --->
+
+    </div>
+
+
+    <script>
+            document.getElementById("dark_mode").addEventListener("change", function() {
+                document.body.classList.toggle("dark-theme");
+            });
+        </script>
+</body>
+</html>

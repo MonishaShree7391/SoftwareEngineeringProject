@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Settlement History</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h2 class="mb-4">Settlement History</h2>
+        <a href="{{ url_for('main.view_balances') }}" class="btn btn-secondary mb-3">← Back to Balances</a>
+
+        {% if history %}
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Reference #</th>
+                    <th>Paid By</th>
+                    <th>Owed By</th>
+                    <th>Amount Paid</th>
+                    <th>Method</th>
+                    <th>Note</th>
+                    <th>Timestamp</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in history %}
+                <tr>
+                    <td>#{{ entry.id }}</td>
+                    <td>{{ entry.paid_by_email }}</td>
+                    <td>{{ entry.owed_by_email }}</td>
+                    <td>{{ entry.amount_paid }}</td>
+                    <td>{{ entry.method or '-' }}</td>
+                    <td>{{ entry.note or '-' }}</td>
+                    <td>{{ entry.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No settlement history available.</p>
+        {% endif %}
+    </div>
+</body>
+</html>

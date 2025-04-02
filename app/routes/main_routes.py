@@ -7,11 +7,13 @@ import logging
 import pandas as pd
 from app.services.groceries import ImageScanner
 from app.models.models import Users, models, SplitInvoiceUser, get_session, SplitInvoiceDetail, Settlements, \
-    DebtSettlements, DebtSettlementsBills,DebtSummary
+    DebtSettlements, DebtSettlementsBills,DebtSummary,SettlementLog
 from app.utils.dataHelpers import convert_date, create_dataframe
 from app.utils.ReadPdf import pdf_to_jpg, extract_text_from_pdf
 from sqlalchemy.orm import aliased
 from datetime import datetime
+from decimal import Decimal
+
 
 # Blueprint setup
 main_bp = Blueprint('main', __name__)
@@ -652,84 +654,77 @@ def add_split_invoice_user_new():
 @main_bp.route('/balances', methods=['GET'])
 @login_required
 def view_balances():
-    """
-    View overall balance details and per-person breakdown for the logged-in user.
-    """
-    print('Inside View_Balances')
-    user_email =  session.get('username') # Fetch the logged-in user's email
+    user_email = session.get('username')
     if not user_email:
         return jsonify({'error': 'User not authenticated or invalid session.'}), 403
 
     with get_session() as db_session:
-        # Overall Totals:
-        # Total Money Owed: when the user is the creditor (paid_by_email == user_email)
+        #   Total money owed to you (others owe you)
         total_money_owed = db_session.query(
-            func.coalesce(func.sum(DebtSettlementsBills.amount), 0)
+            func.coalesce(func.sum(DebtSummary.total_amount), 0)
         ).filter(
-            DebtSettlementsBills.paid_by_email == user_email,
-            DebtSettlementsBills.owed_by_email != user_email,
-            DebtSettlementsBills.settled == 0
+            DebtSummary.paid_by_email == user_email,
+            DebtSummary.owed_by_email != user_email,
+            DebtSummary.settled == False
         ).scalar()
 
-        # Total Money Borrowed: when the user is the debtor (owed_by_email == user_email)
+        #   Total money you owe (you owe others)
         total_money_borrowed = db_session.query(
-            func.coalesce(func.sum(DebtSettlementsBills.amount), 0)
+            func.coalesce(func.sum(DebtSummary.total_amount), 0)
         ).filter(
-            DebtSettlementsBills.owed_by_email == user_email,
-            DebtSettlementsBills.paid_by_email != user_email,
-            DebtSettlementsBills.settled == 0
+            DebtSummary.owed_by_email == user_email,
+            DebtSummary.paid_by_email != user_email,
+            DebtSummary.settled == False
         ).scalar()
-        # Round the totals to two decimal places
-        total_money_owed = round(total_money_owed, 2)
-        total_money_borrowed = round(total_money_borrowed, 2)
-        # Money You Owe (group by the counterparty who lent you money)
+
+        # 💳 Breakdown of who you owe
         owed_breakdown = db_session.query(
-            DebtSettlementsBills.paid_by_email,
-            func.coalesce(func.sum(DebtSettlementsBills.amount), 0).label('total')
+            DebtSummary.paid_by_email,
+            func.sum(DebtSummary.total_amount).label('total')
         ).filter(
-            DebtSettlementsBills.owed_by_email == user_email,
-            DebtSettlementsBills.paid_by_email != user_email,
-            DebtSettlementsBills.settled == 0
-        ).group_by(DebtSettlementsBills.paid_by_email).all()
+            DebtSummary.owed_by_email == user_email,
+            DebtSummary.settled == False
+        ).group_by(DebtSummary.paid_by_email).all()
 
-        #  Money Owed To You (group by the counterparty who owes you money)
+        #   Breakdown of who owes you
         borrowed_breakdown = db_session.query(
-            DebtSettlementsBills.owed_by_email,
-            func.coalesce(func.sum(DebtSettlementsBills.amount), 0).label('total')
+            DebtSummary.owed_by_email,
+            func.sum(DebtSummary.total_amount).label('total')
         ).filter(
-            DebtSettlementsBills.paid_by_email == user_email,
-            DebtSettlementsBills.owed_by_email != user_email,
-            DebtSettlementsBills.settled == 0
-        ).group_by(DebtSettlementsBills.owed_by_email).all()
+            DebtSummary.paid_by_email == user_email,
+            DebtSummary.settled == False
+        ).group_by(DebtSummary.owed_by_email).all()
 
-        #  build lists of dictionaries with the counterparty details
+        # Format owed details
         owed_details = []
         for paid_by_email, total in owed_breakdown:
-            user_obj = db_session.query(SplitInvoiceUser).filter_by(email=paid_by_email).first()
-            if user_obj:
-                name = f"{user_obj.name}"
-            else:
-                name = "Unknown"
-            owed_details.append({'email': paid_by_email, 'name': name, 'amount': round(total, 2)})
+            user = db_session.query(SplitInvoiceUser).filter_by(email=paid_by_email).first()
+            owed_details.append({
+                'email': paid_by_email,
+                'name': user.name if user else 'Unknown',
+                'amount': round(total, 2),
+                'paid_by_email': paid_by_email
+            })
 
+        # Format borrowed details
         borrowed_details = []
         for owed_by_email, total in borrowed_breakdown:
-            user_obj = db_session.query(SplitInvoiceUser).filter_by(email=owed_by_email).first()
-            if user_obj:
-                name = f"{user_obj.name}"
-            else:
-                name = "Unknown"
-            borrowed_details.append({'email': owed_by_email, 'name': name, 'amount': round(total, 2)})
+            user = db_session.query(SplitInvoiceUser).filter_by(email=owed_by_email).first()
+            borrowed_details.append({
+                'email': owed_by_email,
+                'name': user.name if user else 'Unknown',
+                'amount': round(total, 2)
+            })
 
     return render_template(
         'balances.html',
-        total_money_owed=total_money_owed,
-        total_money_borrowed=total_money_borrowed,
+        total_money_owed=round(total_money_owed, 2),
+        total_money_borrowed=round(total_money_borrowed, 2),
         owed_details=owed_details,
         borrowed_details=borrowed_details
     )
 
-
+'''
 @main_bp.route('/settle_debt', methods=['POST'])
 @login_required
 def settle_debt():
@@ -770,7 +765,156 @@ def settle_debt():
     except Exception as e:
         logger.error(f"Error settling debt: {str(e)}")
         return jsonify({'error': 'An error occurred while settling debt.'}), 500
+'''
+'''
+@main_bp.route('/settle_debt', methods=['POST'])
+@login_required
+def settle_debt_bk1():
+    try:
+        data = request.get_json(force=True)
+        print('Request data: ',data)
+        paid_by = data.get('paid_by')
+        owed_by = data.get('owed_by')
+        amount_paid = data.get('amount_paid')  # can be None for full
+        method = data.get('method', '')
+        note = data.get('note', '')
 
+        if amount_paid is None:
+            full = True
+        else:
+            amount_paid = Decimal(str(amount_paid))
+            if amount_paid <= 0:
+                return jsonify({'error': 'Invalid amount.'}), 400
+            full = False
+
+
+        with get_session() as db_session:
+            settlement = db_session.query(DebtSummary).filter_by(
+                paid_by_email=paid_by, owed_by_email=owed_by, settled=False).first()
+
+            if not settlement:
+                return jsonify({'error': 'No outstanding debt found.'}), 404
+
+            remaining = settlement.total_amount
+            if not full and amount_paid > remaining:
+                return jsonify({'error': 'Payment exceeds remaining debt.'}), 400
+
+            # Apply payment
+            if full or amount_paid >= remaining:
+                settlement.settled_amount = settlement.original_amount
+                settlement.total_amount = 0
+                settlement.settled = True
+                settlement.last_settled_on = datetime.utcnow()
+            else:
+                settlement.settled_amount += amount_paid
+                settlement.total_amount -= amount_paid
+                settlement.num_partial_settlements = (settlement.num_partial_settlements or 0) + 1
+
+            # Optional: Log or store method and note
+            if method or note:
+                settlement.notes = f"{method or ''} | {note or ''}".strip(" |")
+
+            db_session.commit()
+
+            return jsonify({
+                'success': True,
+                'settled': settlement.settled
+            })
+    except Exception as e:
+        logger.error(f"Error settling debt: {str(e)}")
+        return jsonify({'error': 'An error occurred while settling debt.'}), 500
+'''
+
+@main_bp.route('/settlement_history', methods=['GET'])
+@login_required
+def view_settlement_history():
+    user_email = session.get('username')
+    with get_session() as db_session:
+        history = db_session.query(SettlementLog).filter(
+            (SettlementLog.paid_by_email == user_email) | (SettlementLog.owed_by_email == user_email)
+        ).order_by(SettlementLog.timestamp.desc()).all()
+
+    return render_template("settlement_history.html", history=history)
+
+@main_bp.route('/settle_debt', methods=['POST'])
+@login_required
+def settle_debt():
+    data = request.get_json()
+    paid_by = data.get('paid_by')
+    owed_by = data.get('owed_by')
+    amount_paid = data.get('amount_paid')
+    full = data.get('full_settlement')
+    method = data.get('method')
+    note = data.get('note')
+
+    # Sanity check
+    if not paid_by or not owed_by:
+        return jsonify({'error': 'Missing required fields'}), 400
+
+    # Convert to Decimal for safe math
+    if amount_paid is not None:
+        try:
+            amount_paid = Decimal(str(amount_paid))
+            if amount_paid <= 0:
+                return jsonify({'error': 'Invalid amount'}), 400
+        except:
+            return jsonify({'error': 'Amount must be a valid number'}), 400
+
+    full = bool(full) if full is not None else False
+
+    with get_session() as db_session:
+        settlement = db_session.query(DebtSummary).filter_by(
+            paid_by_email=paid_by,
+            owed_by_email=owed_by,
+            settled=False
+        ).first()
+
+        if not settlement:
+            return jsonify({'error': 'No outstanding debt found.'}), 404
+
+        remaining = settlement.total_amount
+        print (' remaining amount: ', remaining)
+        # Prevent overpayment
+        if not full and amount_paid > remaining:
+            return jsonify({'error': 'Payment exceeds remaining debt.'}), 400
+
+        # Determine actual amount to apply
+        actual_payment = remaining if full or amount_paid is None else amount_paid
+        try:
+            # Update DebtSummary
+            settlement.settled_amount += actual_payment
+            settlement.total_amount -= actual_payment
+            settlement.total_amount = max(settlement.total_amount, Decimal("0.00"))  # avoid negative
+
+            if settlement.total_amount == 0:
+                settlement.settled = True
+                settlement.last_settled_on = datetime.utcnow()
+            else:
+                settlement.num_partial_settlements = (settlement.num_partial_settlements or 0) + 1
+            db_session.flush()
+            print("DebtSummary update flushed to database")
+            print(f"Before SettlementLog creation - paid_by: {paid_by}, owed_by: {owed_by}, amount: {actual_payment}")
+            # Log in SettlementLog
+            log_entry = SettlementLog(
+                paid_by_email=paid_by,
+                owed_by_email=owed_by,
+                amount_paid=actual_payment,
+                method=method,
+                note=note,
+                timestamp=datetime.utcnow()
+            )
+            print(f"Inserting into SettlementLog: {paid_by} → {owed_by}, {actual_payment}")
+            db_session.add(log_entry)
+
+            print(f"Entry added to session - now committing")
+            db_session.commit()
+            print(f"Commit successful")
+        except Exception as e:
+            db_session.rollback()
+            print(" Commit failed:", e)
+            return jsonify({'error': 'Database error during commit.'}), 500
+
+    return jsonify({'success': True})
 
 def sanitize_input(input_str):
     """
@@ -1084,3 +1228,40 @@ def update_debt_summary(db_session):
         db_session.rollback()
         logger.error(f"Error updating DebtSummary table: {str(e)}")
         raise
+
+def settle_debt_summary(db_session, paid_by_email, owed_by_email, amount_paid, method=None, note=None):
+    record = db_session.query(DebtSummary).filter_by(
+        paid_by_email=paid_by_email,
+        owed_by_email=owed_by_email,
+        settled=False
+    ).first()
+
+    if not record:
+        return {'error': 'No active debt found.'}
+
+    # Log the payment
+    log = SettlementLog(
+        paid_by_email=paid_by_email,
+        owed_by_email=owed_by_email,
+        amount_paid=amount_paid,
+        method=method,
+        note=note
+    )
+    db_session.add(log)
+
+    # Update debt record
+    remaining = record.total_amount
+    if amount_paid >= remaining:
+        record.total_amount = 0
+        record.settled = True
+        record.settled_amount = record.original_amount
+    else:
+        record.total_amount -= amount_paid
+        record.settled_amount += amount_paid
+        record.num_partial_settlements += 1
+
+    record.last_settled_on = datetime.utcnow()
+    record.last_updated = datetime.utcnow()
+
+    db_session.commit()
+    return {'success': True, 'remaining_balance': record.total_amount}

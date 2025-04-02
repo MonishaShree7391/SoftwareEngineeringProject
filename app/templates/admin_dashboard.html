@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
+    h1, h2 { text-align: center; }
+    .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { padding: 10px; border-bottom: 1px solid #ddd; text-align: center; }
+    button { padding: 8px 12px; border: none; background: #007bff; color: white; border-radius: 5px; cursor: pointer; }
+    button:hover { background: #0056b3; }
+</style>
+
+        <div class="container">
+            <h1>Admin Dashboard</h1>
+
+            <h2>User Management</h2>
+            <table>
+                <tr>
+                    <th>ID</th><th>Username</th><th>Role</th><th>Actions</th>
+                </tr>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.userid }}</td>
+                    <td>{{ user.username }}</td>
+                    <td>{% if user.is_admin %}Admin{% else %}User{% endif %}</td>
+                    <td>
+                        {% if not user.is_admin %}
+                            <form action="{{ url_for('admin.promote_user', user_id=user.userid) }}" method="POST">
+                                <button type="submit">Promote to Admin</button>
+                            </form>
+                        {% else %}
+                            <form action="{{ url_for('admin.demote_user', user_id=user.userid) }}" method="POST">
+                                <button type="submit">Demote to User</button>
+                            </form>
+                        {% endif %}
+                        <form action="{{ url_for('admin.delete_user', user_id=user.userid) }}" method="POST">
+                            <button style="background: red;">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+
+
+    <h2>Settlement Overview</h2>
+        <table>
+            <tr>
+                <th>Paid By</th>
+                <th>Owed By</th>
+                <th>Amount</th>
+                <th>Last Updated</th>
+                <th>Status</th>
+            </tr>
+            {% for summary, paid_by_name, owed_by_name in debt_summary %}
+            <tr>
+                <td>{{ paid_by_name }}</td>
+                <td>{{ owed_by_name }}</td>
+                <td>{{ summary.total_amount | round(2) }}</td>
+                <td>{{ summary.last_updated }}</td>
+                <td>
+                    {% if summary.settled %}
+                         Settled
+                    {% else %}
+                         Pending
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+</body>
+</html>

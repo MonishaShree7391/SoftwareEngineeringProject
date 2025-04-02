@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Balances</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        body { background-color: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <div id="toast" class="alert alert-success" role="alert" style="display: none; position: fixed; top: 10px; right: 10px; z-index: 9999;">
+        ✅ Debt settled successfully!
+    </div>
+
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card balance-card mb-4">
+                    <div class="card-header">
+                        <h4 class="mb-0">Balance Summary</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="alert alert-success">
+                                    <h2>Total Money Owed to You</h2>
+                                    <p class="h4">{{ total_money_owed }}</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="alert alert-warning">
+                                    <h5>Total Money You Owe</h5>
+                                    <p class="h4">{{ total_money_borrowed }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card balance-card mb-4">
+                    <div class="card-header">
+                        <h4 class="mb-0">Money You Owe</h4>
+                    </div>
+                    <div class="card-body">
+                        {% if owed_details %}
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Amount</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for detail in owed_details %}
+                                    <tr>
+                                        <td>{{ detail.name }}</td>
+                                        <td>{{ detail.email }}</td>
+                                        <td>{{ detail.amount }}</td>
+                                        <td>
+                                            {% if detail.amount > 0 %}
+                                            <button class="btn btn-success btn-sm" onclick="settleDebt('{{ detail.email }}', '{{ session.username }}', {{ detail.amount }})">Settle</button>
+                                            {% else %}
+                                            <span class="text-success font-weight-bold">✅ Settled</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        {% else %}
+                            <p class="no-data">No outstanding debts where you owe money.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="card balance-card mb-4">
+                    <div class="card-header">
+                        <h4 class="mb-0">Money Owed to You</h4>
+                    </div>
+                    <div class="card-body">
+                        {% if borrowed_details %}
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Amount</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for detail in borrowed_details %}
+                                    <tr>
+                                        <td>{{ detail.name }}</td>
+                                        <td>{{ detail.email }}</td>
+                                        <td>{{ detail.amount }}</td>
+                                        <td>
+                                            {% if detail.amount > 0 %}
+                                            <button class="btn btn-success btn-sm" onclick="settleDebt('{{ session.username }}', '{{ detail.email }}', {{ detail.amount }})">Settle</button>
+                                            {% else %}
+                                            <span class="text-success font-weight-bold">✅ Settled</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        {% else %}
+                            <p class="no-data">No outstanding debts where others owe you money.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden form to submit settlement -->
+    <form id="settleForm" method="POST" action="{{ url_for('main.settle_debt') }}" style="display:none;">
+        <input type="hidden" name="paid_by" id="paid_by">
+        <input type="hidden" name="owed_by" id="owed_by">
+        <input type="hidden" name="amount_paid" id="amount_paid">
+        <input type="hidden" name="full_settlement" id="full_settlement">
+    </form>
+
+    <script>
+        function settleDebt(paidBy, owedBy, maxAmount) {
+            const choice = confirm("Click OK for Full Settlement.\nClick Cancel to enter a partial amount.");
+            if (choice) {
+                document.getElementById("paid_by").value = paidBy;
+                document.getElementById("owed_by").value = owedBy;
+                document.getElementById("amount_paid").value = maxAmount;
+                document.getElementById("full_settlement").value = "true";
+                document.getElementById("settleForm").submit();
+            } else {
+                let amount = prompt(`Enter amount to settle (Remaining: ${maxAmount}):`);
+                if (!amount || isNaN(amount) || amount <= 0) {
+                    alert("Invalid amount.");
+                    return;
+                }
+                if (parseFloat(amount) > maxAmount) {
+                    alert("Amount exceeds remaining debt.");
+                    return;
+                }
+                document.getElementById("paid_by").value = paidBy;
+                document.getElementById("owed_by").value = owedBy;
+                document.getElementById("amount_paid").value = amount;
+                document.getElementById("full_settlement").value = "false";
+                document.getElementById("settleForm").submit();
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('settled') === 'true') {
+                const toast = document.getElementById("toast");
+                toast.style.display = "block";
+                setTimeout(() => { toast.style.display = "none"; }, 3000);
+            }
+        });
+    </script>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
