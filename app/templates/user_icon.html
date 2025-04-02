@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>user</title>
+</head>
+<body>
+<!-- User Icon Dropdown Component -->
+<div class="user-icon-container">
+    <img src="{{ url_for('static', filename='images/user_icon.png') }}" alt="User" class="user-dropdown-icon" onclick="toggleDropdown()">
+    <div class="dropdown-menu" id="userDropdown">
+        <a href="{{ url_for('user.profile') }}">Profile</a>
+        <a href="{{ url_for('user.settings') }}">Settings</a>
+        <a href="{{ url_for('user.logout') }}">Logout</a>
+    </div>
+</div>
+
+<script>
+    function toggleDropdown() {
+        var dropdown = document.getElementById("userDropdown");
+        dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener("click", function(event) {
+        var dropdown = document.getElementById("userDropdown");
+        var icon = document.querySelector(".user-dropdown-icon");
+        if (!dropdown.contains(event.target) && !icon.contains(event.target)) {
+            dropdown.style.display = "none";
+        }
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin - Manage Settlements</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+<style>
+    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
+    h1, h2 { text-align: center; }
+    .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { padding: 10px; border-bottom: 1px solid #ddd; text-align: center; }
+    button { padding: 8px 12px; border: none; background: #007bff; color: white; border-radius: 5px; cursor: pointer; }
+    button:hover { background: #0056b3; }
+    .settled { background: #28a745; color: white; } /* Green for settled */
+    .pending { background: #ffc107; color: black; } /* Yellow for pending */
+    .delete-btn { background: red; }
+</style>
+
+<div class="container">
+    <h1>Manage Settlements</h1>
+
+    <table>
+        <tr>
+            <th>Paid By</th>
+            <th>Owed By</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+        {% for settlement in settlements %}
+        <tr>
+            <td>{{ settlement.paid_by_email }}</td>
+            <td>{{ settlement.owed_by_email }}</td>
+            <td>{{ settlement.total_amount }}</td>
+            <td>
+                {% if settlement.settled %}
+                    <span class="settled">Settled</span>
+                {% else %}
+                    <span class="pending">Pending</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if not settlement.settled %}
+                <form action="{{ url_for('admin.mark_settlement_complete', settlement_id=settlement.id) }}" method="POST">
+                    <button type="submit">Mark as Settled</button>
+                </form>
+                {% endif %}
+                <form action="{{ url_for('admin.delete_settlement', settlement_id=settlement.id) }}" method="POST">
+                    <button type="submit" class="delete-btn">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+</body>
+</html>

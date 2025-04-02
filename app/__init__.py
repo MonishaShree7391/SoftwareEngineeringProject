@@ -10,6 +10,7 @@ from app.routes.main_routes import main_bp
 from app.routes.user_routes import user_bp
 from app.services.DatabaseConnection import db,Base
 from sqlalchemy.ext.declarative import declarative_base
+from app.routes.admin_routes import admin_bp
 
 # Initialize Flask extensions
 login_manager = LoginManager()
@@ -22,6 +23,7 @@ def create_app(config_class=Config):
     app.config.from_object(config_class)
     app.register_blueprint(main_bp)
     app.register_blueprint(user_bp)
+    app.register_blueprint(admin_bp, url_prefix="/admin")
 
     # Ensure necessary directories exist
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)

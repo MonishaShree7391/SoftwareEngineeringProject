@@ -2,37 +2,42 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Profile</title>
-    <!-- Add any necessary CSS css or links -->
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        .profile-info {
-            margin-bottom: 20px;
-        }
-        .profile-info label {
-            font-weight: bold;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
-    <h1>User Profile</h1>
-    <div class="profile-info">
-        <label>Username:</label>
-        <span>{{ user.username }}</span>
-    </div>
-    <div class="profile-info">
-        <label>First Name:</label>
-        <span>{{ user.firstname }}</span>
-    </div>
-    <div class="profile-info">
-        <label>Last Name:</label>
-        <span>{{ user.lastname }}</span>
-    </div>
+    {% include 'user_icon.html' %}
 
 
-    <a href="{{ url_for('user.logout') }}">Logout</a>
+        <div class="profile-container">
+            <h1 class="text-center">User Profile</h1>
+
+            <div class="profile-info">
+                <label>Username:</label>
+                <span>{{ user.username }}</span>
+            </div>
+
+            <div class="profile-info">
+                <label>First Name:</label>
+                <span>{{ user.firstname }}</span>
+            </div>
+
+            <div class="profile-info">
+                <label>Last Name:</label>
+                <span>{{ user.lastname }}</span>
+            </div>
+
+            <div class="profile-info">
+                <label>Email:</label>
+                <span>{{ user.username }}</span> <!-- Assuming username is the email -->
+            </div>
+
+            <div class="profile-actions">
+                <a href="{{ url_for('user.settings') }}" class="custom-btn">change password</a>
+                <a href="{{ url_for('user.logout') }}" class="custom-btn btn-secondary">Logout</a>
+            </div>
+        </div>
+
 </body>
 </html>

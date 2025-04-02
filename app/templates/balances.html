@@ -1,115 +1,289 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Your Balances</title>
-    <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <style>
-        body {
-            background-color: #f8f9fa;
-        }
-
-    </style>
 </head>
 <body>
+    <!-- Success Toast -->
+    <div id="toast" class="alert alert-success" role="alert" style="display: none; position: fixed; top: 10px; right: 10px; z-index: 9999;">
+        ✅ Debt settled successfully!
+    </div>
+
     <div class="container mt-5">
-        <div class="row justify-content-center">
-            <div class="col-md-8">
-                <!-- Balance Summary Card -->
-                <div class="card balance-card mb-4">
-                    <div class="card-header">
-                        <h4 class="mb-0">Balance Summary</h4>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="alert alert-success">
-                                    <h2>Total Money Owed to You</h2>
-                                    <p class="h4">{{ total_money_owed }}</p>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="alert alert-warning">
-                                    <h5>Total Money You Owe</h5>
-                                    <p class="h4">{{ total_money_borrowed }}</p>
-                                </div>
-                            </div>
+        <div class="text-right mb-3">
+            <a href="{{ url_for('main.view_settlement_history') }}" class="btn btn-secondary">View Settlement History</a>
+        </div>
+
+        <!-- Balance Summary -->
+        <div class="card balance-card mb-4">
+            <div class="card-header"><h4 class="mb-0">Balance Summary</h4></div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="alert alert-success">
+                            <h5>Total Money Owed to You</h5>
+                            <p class="h4">{{ total_money_owed }}</p>
                         </div>
                     </div>
-                </div>
-
-                <!-- Money You Owe Section -->
-                <div class="card balance-card mb-4">
-                    <div class="card-header">
-                        <h4 class="mb-0">Money You Owe</h4>
-                    </div>
-                    <div class="card-body">
-                        {% if owed_details %}
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Email</th>
-                                        <th>Amount</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for detail in owed_details %}
-                                        <tr>
-                                            <td>{{ detail.name }}</td>
-                                            <td>{{ detail.email }}</td>
-                                            <td>{{ detail.amount }}</td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        {% else %}
-                            <p class="no-data">No outstanding debts where you owe money.</p>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Money Owed to You Section -->
-                <div class="card balance-card mb-4">
-                    <div class="card-header">
-                        <h4 class="mb-0">Money Owed to You</h4>
-                    </div>
-                    <div class="card-body">
-                        {% if borrowed_details %}
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Email</th>
-                                        <th>Amount</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for detail in borrowed_details %}
-                                        <tr>
-                                            <td>{{ detail.name }}</td>
-                                            <td>{{ detail.email }}</td>
-                                            <td>{{ detail.amount }}</td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        {% else %}
-                            <p class="no-data">No outstanding debts where others owe you money.</p>
-                        {% endif %}
+                    <div class="col-md-6">
+                        <div class="alert alert-warning">
+                            <h5>Total Money You Owe</h5>
+                            <p class="h4">{{ total_money_borrowed }}</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Money You Owe -->
+        <div class="card balance-card mb-4">
+            <div class="card-header"><h4 class="mb-0">Money You Owe</h4></div>
+            <div class="card-body">
+                {% if owed_details %}
+                <table class="table table-hover">
+                    <thead><tr><th>Name</th><th>Email</th><th>Amount</th><th>Action</th></tr></thead>
+                    <tbody>
+                        {% for detail in owed_details %}
+                        <tr>
+                            <td>{{ detail.name }}</td>
+                            <td>{{ detail.email }}</td>
+                            <td>{{ detail.amount }}</td>
+                            <td>
+                                {% if detail.amount > 0 %}
+                                <button class="btn btn-primary settle-btn"
+                                        data-owedby="{{ session.username }}"
+                                        data-paidby="{{ detail.email }}"
+                                        data-amount="{{ detail.amount }}"
+                                        data-toggle="modal"
+                                        data-target="#settleModal">Settle</button>
+                                {% else %}
+                                <span class="text-success font-weight-bold">✅ Settled</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="no-data">No outstanding debts where you owe money.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Money Owed to You -->
+        <div class="card balance-card mb-4">
+            <div class="card-header"><h4 class="mb-0">Money Owed to You</h4></div>
+            <div class="card-body">
+                {% if borrowed_details %}
+                <table class="table table-hover">
+                    <thead><tr><th>Name</th><th>Email</th><th>Amount</th><th>Action</th></tr></thead>
+                    <tbody>
+                        {% for detail in borrowed_details %}
+                        <tr>
+                            <td>{{ detail.name }}</td>
+                            <td>{{ detail.email }}</td>
+                            <td>{{ detail.amount }}</td>
+                            <td>
+                                {% if detail.amount > 0 %}
+                                <button class="btn btn-primary settle-btn"
+                                        data-paidby="{{ session.username }}"
+                                        data-owedby="{{ detail.email }}"
+                                        data-amount="{{ detail.amount }}"
+                                        data-toggle="modal"
+                                        data-target="#settleModal">Settle</button>
+                                {% else %}
+                                <span class="text-success font-weight-bold">✅ Settled</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="no-data">No outstanding debts where others owe you money.</p>
+                {% endif %}
+            </div>
+        </div>
     </div>
 
-    <!-- Bootstrap JS and dependencies -->
+          <!-- Modal -->
+    <div class="modal fade" id="settleModal" tabindex="-1" aria-labelledby="settleModalLabel" aria-hidden="true">
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">Settle Debt</h5>
+                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                  </div>
+                  <div class="modal-body text-center">
+                    <p id="instructionText"><strong>Click Full Settle</strong> to mark the entire debt as settled.<br><strong>Click Partial Settle</strong> to enter an amount.</p>
+                    <input type="number" step="any" min="0" id="partialAmountInput" class="form-control d-none my-2" placeholder="Enter partial amount">
+                    <input type="text" id="methodInput" class="form-control d-none my-2" placeholder="Payment method (e.g. UPI, cash)">
+                    <input type="text" id="noteInput" class="form-control d-none my-2" placeholder="Optional note (e.g. via GPay)">
+                  </div>
+                  <div class="modal-footer">
+                      <button type="button" class="btn btn-success" id="fullSettleBtn">Full Settle</button>
+                      <button type="button" class="btn btn-warning" id="partialSettleBtn">Partial Settle</button>
+                      <button type="button" class="btn btn-primary d-none" id="confirmSettleBtn">Confirm Settlement</button>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+    <!-- JS Section -->
+
+    <script>
+         document.addEventListener('DOMContentLoaded', function () {
+    // Toast notification function
+    const showToast = (message, type = 'success') => {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.className = `alert alert-${type}`;
+        toast.style.display = 'block';
+        setTimeout(() => toast.style.display = 'none', 3000);
+    };
+
+    // Settlement modal variables
+    let currentPaidBy = '';
+    let currentOwedBy = '';
+    let currentMaxAmount = 0;
+    let isFullSettlement = false;
+
+    // DOM elements
+    const partialInput = document.getElementById('partialAmountInput');
+    const methodInput = document.getElementById('methodInput');
+    const noteInput = document.getElementById('noteInput');
+    const confirmSettleBtn = document.getElementById('confirmSettleBtn');
+    const instructionText = document.getElementById('instructionText');
+    const fullBtn = document.getElementById('fullSettleBtn');
+    const partialBtn = document.getElementById('partialSettleBtn');
+
+    // Initialize modal with button data
+    document.querySelectorAll('.settle-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            currentPaidBy = btn.dataset.paidby;
+            currentOwedBy = btn.dataset.owedby;
+            currentMaxAmount = parseFloat(btn.dataset.amount || 0);
+
+            console.log("Modal initialized:", {
+                payer: currentPaidBy,
+                payee: currentOwedBy,
+                maxAmount: currentMaxAmount
+            });
+
+            resetModal();
+        });
+    });
+
+    // Reset modal to initial state
+    function resetModal() {
+        isFullSettlement = false;
+        partialInput.value = '';
+        methodInput.value = '';
+        noteInput.value = '';
+        instructionText.classList.remove('d-none');
+        partialInput.classList.add('d-none');
+        methodInput.classList.add('d-none');
+        noteInput.classList.add('d-none');
+        confirmSettleBtn.classList.add('d-none');
+        fullBtn.classList.remove('d-none');
+        partialBtn.classList.remove('d-none');
+    }
+
+    // Full settlement handler
+    fullBtn.addEventListener('click', () => {
+        isFullSettlement = true;
+        partialInput.classList.add('d-none');
+        methodInput.classList.remove('d-none');
+        noteInput.classList.remove('d-none');
+        confirmSettleBtn.classList.remove('d-none');
+        fullBtn.classList.add('d-none');
+        partialBtn.classList.add('d-none');
+    });
+
+    // Partial settlement handler
+    partialBtn.addEventListener('click', () => {
+        isFullSettlement = false;
+        partialInput.classList.remove('d-none');
+        methodInput.classList.remove('d-none');
+        noteInput.classList.remove('d-none');
+        confirmSettleBtn.classList.remove('d-none');
+        instructionText.classList.add('d-none');
+        fullBtn.classList.add('d-none');
+        partialBtn.classList.add('d-none');
+    });
+
+    // Main settlement handler
+    confirmSettleBtn.addEventListener('click', async () => {
+        const method = methodInput.value || "unspecified";
+        const note = noteInput.value || "";
+
+        console.log("Attempting settlement:", {
+            type: isFullSettlement ? "FULL" : "PARTIAL",
+            paidBy: currentPaidBy,
+            owedBy: currentOwedBy,
+            amount: isFullSettlement ? "FULL_AMOUNT" : partialInput.value,
+            method,
+            note
+        });
+
+        try {
+            const payload = {
+                paid_by: currentPaidBy,
+                owed_by: currentOwedBy,
+                full_settlement: isFullSettlement,
+                method,
+                note
+            };
+
+            if (!isFullSettlement) {
+                const amount = parseFloat(partialInput.value);
+                if (!amount || amount <= 0 || amount > currentMaxAmount) {
+                    throw new Error(`Invalid amount (must be between 0 and ${currentMaxAmount})`);
+                }
+                payload.amount_paid = amount;
+            } else {
+                payload.amount_paid = null;
+            }
+
+            const response = await fetch('/settle_debt', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error(`Server returned ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log("Server response:", data);
+            sessionStorage.setItem('lastSettlement', JSON.stringify(data));
+
+            if (data.success) {
+                showToast(isFullSettlement ? '✅ Debt fully settled!' : '✅ Partial payment recorded!');
+
+                // Debug mode check
+                if (!new URLSearchParams(window.location.search).has('debug')) {
+                    setTimeout(() => location.reload(), 2000);
+                }
+            } else {
+                throw new Error(data.error || 'Unknown server error');
+            }
+        } catch (error) {
+            console.error("Settlement failed:", error);
+            showToast(`❌ Error: ${error.message}`, 'danger');
+        }
+    });
+});
+          </script>
+
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
