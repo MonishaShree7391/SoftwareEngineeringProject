@@ -11,7 +11,7 @@ from app.models.models import Users, models, SplitInvoiceUser, get_session, Spli
 from app.utils.dataHelpers import convert_date, create_dataframe
 from app.utils.ReadPdf import pdf_to_jpg, extract_text_from_pdf
 from sqlalchemy.orm import aliased
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 
 
@@ -45,7 +45,13 @@ def upload_file():
     try:
         # Fetch and validate inputs
         filename = request.form.get('filename')
-        session['billid'] = filename
+        filename_for_billid=filename
+        # Ensure the filename ends with .pdf
+        if not filename.lower().endswith('.pdf'):
+            filename += '.pdf'
+
+        session['billid'] = filename_for_billid
+        #print("session['billid']", session['billid'])
 
         NameOfTheShop = request.form.get('NameOfTheShop')
         session['NameOfTheShop'] = NameOfTheShop.lower()
@@ -54,7 +60,7 @@ def upload_file():
         year = request.form.get('year')
 
         # Debugging log to verify values are received correctly
-        logger.info(f"Received Upload: filename={filename}, shop={NameOfTheShop}, month={month}, year={year}")
+        logger.info(f"Received Upload: filename={filename_for_billid}, shop={NameOfTheShop}, month={month}, year={year}")
 
         if  filename is None:
             logger.error("Missing filename  in the request.")
@@ -109,11 +115,17 @@ def upload_file():
 
         with get_session() as db_session:
             # Check for duplicates
-            existing_count = db_session.query(modelShop).filter_by(userid=userid, billId=filename).count()
+            existing_count = db_session.query(modelShop).filter_by(userid=userid, billId=filename_for_billid).count()
 
             if existing_count > 0:
                 logger.info(f"Bill ID {filename} already exists in the database. Skipping insertion.")
-                return redirect(url_for('main.view_data'))
+                #return redirect(url_for('main.view_data'))
+                logger.warning(f"Bill {filename_for_billid} is already split.")
+                return jsonify({
+                    "warning": f"Bill ID {filename_for_billid} already exists",
+                    "Bill_exists": True
+                }), 200
+
             else:
                 # Generate the DataFrame using the create_dataframe function
 
@@ -128,7 +140,7 @@ def upload_file():
                     for index, row in df.iterrows():
                         new_entry = modelShop(
                             userid=int(userid),
-                            billId=filename,
+                            billId=filename_for_billid,
                             month=row['month'],
                             year=int(row['year']),
                             item=row['item'],
@@ -143,7 +155,7 @@ def upload_file():
                         db_session.add(new_entry)
 
                     db_session.commit()
-                    logger.info(f"File metadata for {filename} recorded successfully.")
+                    logger.info(f"File metadata for {filename_for_billid} recorded successfully.")
                     return redirect(url_for('main.view_data'))
                 except Exception as e:
                     db_session.rollback()  # Rollback on error
@@ -179,6 +191,7 @@ def check_filename():
 
         with get_session() as db_session:
             existing_count = db_session.query(modelShop).filter_by(userid=userid, billId=filename).count()
+            logger.info(f"Check Filename: {filename}, Existing Count {existing_count} ")
             if existing_count > 0:
                 return jsonify({'exists': True}), 200
             else:
@@ -203,11 +216,13 @@ def view_data():
             return jsonify({'error': 'User not authenticated or invalid session.'}), 403
 
         # Fetch the Bill ID from the session
-        billid = session.get('billid')
+        #billid = session.get('billid')
+        billid = request.args.get('billId') or session.get('billid')
+        logger.info(f"billid for user {userid} with Bill ID {billid}.")
         if not billid:
             logger.error("Bill ID not found in session.")
             return jsonify({'error': 'Bill ID not found in session.'}), 400
-
+        session['billid'] = billid
         # Query the database for the user's uploaded file records based on userid and billId
 
         modelShop = models.get("groceries")
@@ -225,17 +240,19 @@ def view_data():
 
             else:
                 # Process the records to extract details
+                logger.info(f"files found for user {userid} with Bill ID {billid}.")
                 bill_info = records[0].billId  # Assuming all records belong to the same Bill ID
                 totalSum_info = records[0].totalSum
                 address_info = records[0].address  # Assuming the same address for all records
                 date_info = records[0].date  # Assuming the same date for all records
                 ShopName = records[0].shopName
                 # Fetch debt settlement details for the bill ID
-                debt_settlement_details = fetch_debt_settlement_details(billid)
+                debt_settlement_details = fetch_debt_settlement_details(billid, userid)
                 # Prepare the item data to display in the table
 
 
-                split_details = db_session.query(SplitInvoiceDetail).filter_by(billId=billid).all()
+                split_details = db_session.query(SplitInvoiceDetail).filter_by(billId=billid, userid=userid).all()
+                logger.info(f"Split details fetched for user {userid}, bill {billid}: {split_details}")
                 # Fetch split invoice users (InvoiceUsers) to build an email-to-name mapping.
                 split_invoice_users = db_session.query(SplitInvoiceUser).filter_by(userid=userid).all()
 
@@ -281,7 +298,6 @@ def view_data():
                     debt_settlement_details=debt_settlement_details,
                     split_invoice_users = split_invoice_users,
                     logged_in_user = logged_in_user
-                # Assuming you want to show the date in the header
                 )
 
     except Exception as e:
@@ -339,6 +355,97 @@ def view_data_by_date():
         return render_template('view_data.html', message="An error occurred while fetching data.")
 
 
+@main_bp.route('/view_data_by_month', methods=['GET'])
+@login_required
+def view_data_by_month():
+    month = request.args.get('month')
+    year = request.args.get('year')
+    userid = fetch_user_id_from_session()
+
+    if not (userid and month and year):
+        return render_template('view_data.html', message="Please select both month and year.")
+
+    with get_session() as db_session:
+        modelShop = models.get("groceries")
+        records = db_session.query(modelShop).filter_by(userid=userid, month=month, year=year).all()
+
+        if not records:
+            return render_template('view_data.html', message="No records found for selected month.")
+
+        session['billid'] = records[0].billId
+        return redirect(url_for('main.view_data'))
+
+@main_bp.route('/view_invoices_by_month', methods=['GET'])
+@login_required
+def view_invoices_by_month():
+    month = request.args.get('month')
+    year = request.args.get('year')
+    userid = fetch_user_id_from_session()
+
+    if not (userid and month and year):
+        return render_template('view_data.html', message="Please select both month and year.")
+
+    modelShop = models.get("groceries")
+    with get_session() as db_session:
+        records = db_session.query(modelShop).filter_by(userid=userid, month=month, year=year).all()
+
+        if not records:
+            return render_template('view_data.html', message="No records found for selected month.")
+
+        # Group records by billId
+        # Group records by billId
+        bill_map = {}
+        for record in records:
+            bill_id = record.billId
+
+            # Add .pdf extension only if missing
+            if not bill_id.endswith('.pdf'):
+                filename_pdf = bill_id + '.pdf'
+            else:
+                filename_pdf = bill_id
+
+            pdf_url = url_for('static', filename=f"uploads/{record.year}/{record.month}/{filename_pdf}")
+            print("🔗 PDF URL:", pdf_url)
+
+            bill_map[record.billId] = {
+                'billId': record.billId,
+                'shop': record.shopName,
+                'date': record.date,
+                'total': record.totalSum,
+                'pdf_url': pdf_url
+            }
+
+        return render_template('view_invoices_month.html', bills=list(bill_map.values()), month=month, year=year)
+
+#def se@main_bp.route('/static/uploads/<path:filename>')
+#rve_uploaded_file(filename):
+   # return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename)
+
+@main_bp.route('/get_invoice_years', methods=['GET'])
+@login_required
+def get_invoice_years():
+    userid = fetch_user_id_from_session()
+    if not userid:
+        return jsonify({'error': 'User not authenticated'}), 403
+
+    modelShop = models.get("groceries")
+    with get_session() as db_session:
+        years = db_session.query(modelShop.year).filter_by(userid=userid).distinct().all()
+        years_list = [y[0] for y in years]
+        return jsonify({'years': years_list})
+
+@main_bp.route('/get_invoice_months/<int:year>', methods=['GET'])
+@login_required
+def get_invoice_months(year):
+    userid = fetch_user_id_from_session()
+    if not userid:
+        return jsonify({'error': 'User not authenticated'}), 403
+
+    modelShop = models.get("groceries")
+    with get_session() as db_session:
+        months = db_session.query(modelShop.month).filter_by(userid=userid, year=year).distinct().all()
+        months_list = [m[0] for m in months]
+        return jsonify({'months': months_list})
 
 
 @main_bp.route('/split_invoice', methods=['GET', 'POST'])
@@ -459,11 +566,13 @@ def split_invoice():
                         logger.info(f"Payer found: ID={payer.id}, Email={payer.email}, Name={payer.name}")
                         if payer.email == logged_in_user_email:
                             logger.info(f"Payer is the logged-in user. Updating payer ID to match Users table.")
-                            payer.id = logged_in_user_id #  Ensure payer.id matches logged-in user ID
+                            #payer.id = logged_in_user_id #  Ensure payer.id matches logged-in user ID
+                            paid_by_user_id = logged_in_user_id
                             paid_by_email = payer.email
                         else:
                              # Ensure payer.id matches logged-in user email
                             paid_by_email = payer.email
+                            paid_by_user_id = payer.id
                     else:
                             logger.error(f"Payer with email {paid_by} not found.")
                             return jsonify({'error': 'Payer not found.'}), 400
@@ -472,20 +581,27 @@ def split_invoice():
                     final_paid_by = payer.email
 
                     #  Check if bill is already split
-                    existing_splits = db_session.query(SplitInvoiceDetail).filter_by(billId=billid).count()
+                    #existing_splits = db_session.query(SplitInvoiceDetail).filter_by(billId=billid).count()
+                    existing_splits = db_session.query(SplitInvoiceDetail).filter_by(billId=billid,
+                                                                                     userid=userid).count()
+
                     if existing_splits > 0 and not overwrite:
                         logger.warning(f"Bill {billid} is already split.")
                         return jsonify({'warning': 'Bill is already split. Overwrite?', 'split_exists': True}), 200
 
                     #  If overwrite is confirmed, remove existing splits
                     if overwrite:
-                        db_session.query(SplitInvoiceDetail).filter_by(billId=billid).delete()
+                        #db_session.query(SplitInvoiceDetail).filter_by(billId=billid).delete()
+                        db_session.query(SplitInvoiceDetail).filter_by(billId=billid, userid=userid).delete()
+
                         db_session.commit()
                         logger.info(f"Previous split details for Bill ID {billid}  in SplitInvoiceDetail deleted.")
-                        db_session.query(Settlements).filter_by(billId=billid).delete()
+                        #db_session.query(Settlements).filter_by(billId=billid).delete()
+                        db_session.query(Settlements).filter_by(billId=billid, userid=userid).delete()
                         db_session.commit()
                         logger.info(f"Previous split details for Bill ID {billid}  in Settlements deleted.")
-                        db_session.query(DebtSettlementsBills).filter_by(billId=billid).delete()
+                        #db_session.query(DebtSettlementsBills).filter_by(billId=billid).delete()
+                        db_session.query(DebtSettlementsBills).filter_by(billId=billid, created_by=userid).delete()
                         db_session.commit()
                         logger.info(f"Previous split details for Bill ID {billid}  in DebtSettlementsBills deleted.")
                         db_session.commit()
@@ -498,7 +614,7 @@ def split_invoice():
                         return jsonify({'error': 'groceries table is not available.'}), 500
 
                     for item, users in zip(items, shared_with):
-                        item_record = db_session.query(groceries).filter_by(billId=billid, item=item).first()
+                        item_record = db_session.query(groceries).filter_by(billId=billid, userid=userid, item=item).first()
                         if not item_record:
                             logger.error(f"Item {item} not found in the database.")
                             continue
@@ -539,7 +655,7 @@ def split_invoice():
                                 logger.info(f"Inside new_settlement:")
                                 new_settlement = Settlements(
                                     billId=billid,
-                                    paid_by=payer.id,
+                                    paid_by=paid_by_user_id,
                                     owed_by=owed_by_id,
                                     paid_by_email=paid_by_email,
                                     owed_by_email=owed_by_email,
@@ -654,17 +770,19 @@ def add_split_invoice_user_new():
 @main_bp.route('/balances', methods=['GET'])
 @login_required
 def view_balances():
-    user_email = session.get('username')
-    if not user_email:
+    loggedin_user_email = session.get('username')
+    if not loggedin_user_email:
         return jsonify({'error': 'User not authenticated or invalid session.'}), 403
 
     with get_session() as db_session:
+
+        update_debt_summary(db_session)
         #   Total money owed to you (others owe you)
         total_money_owed = db_session.query(
             func.coalesce(func.sum(DebtSummary.total_amount), 0)
         ).filter(
-            DebtSummary.paid_by_email == user_email,
-            DebtSummary.owed_by_email != user_email,
+            DebtSummary.paid_by_email == loggedin_user_email,
+            DebtSummary.owed_by_email != loggedin_user_email,
             DebtSummary.settled == False
         ).scalar()
 
@@ -672,28 +790,37 @@ def view_balances():
         total_money_borrowed = db_session.query(
             func.coalesce(func.sum(DebtSummary.total_amount), 0)
         ).filter(
-            DebtSummary.owed_by_email == user_email,
-            DebtSummary.paid_by_email != user_email,
+            DebtSummary.owed_by_email == loggedin_user_email,
+            DebtSummary.paid_by_email != loggedin_user_email,
             DebtSummary.settled == False
         ).scalar()
 
-        # 💳 Breakdown of who you owe
+        #  Breakdown of who you owe
         owed_breakdown = db_session.query(
             DebtSummary.paid_by_email,
             func.sum(DebtSummary.total_amount).label('total')
         ).filter(
-            DebtSummary.owed_by_email == user_email,
+            DebtSummary.owed_by_email == loggedin_user_email,
+            DebtSummary.paid_by_email != loggedin_user_email,
             DebtSummary.settled == False
         ).group_by(DebtSummary.paid_by_email).all()
+
+
+        logger.info(f"owed_breakdown details: {owed_breakdown}")
+
 
         #   Breakdown of who owes you
         borrowed_breakdown = db_session.query(
             DebtSummary.owed_by_email,
             func.sum(DebtSummary.total_amount).label('total')
         ).filter(
-            DebtSummary.paid_by_email == user_email,
+            DebtSummary.paid_by_email == loggedin_user_email,
+            DebtSummary.owed_by_email != loggedin_user_email,
             DebtSummary.settled == False
         ).group_by(DebtSummary.owed_by_email).all()
+
+        logger.info(f"borrowed_breakdown details: {borrowed_breakdown}")
+
 
         # Format owed details
         owed_details = []
@@ -705,6 +832,7 @@ def view_balances():
                 'amount': round(total, 2),
                 'paid_by_email': paid_by_email
             })
+        logger.info(f"owed details: {owed_details}")
 
         # Format borrowed details
         borrowed_details = []
@@ -715,7 +843,7 @@ def view_balances():
                 'name': user.name if user else 'Unknown',
                 'amount': round(total, 2)
             })
-
+        logger.info(f"borrowed_details details: {borrowed_details}")
     return render_template(
         'balances.html',
         total_money_owed=round(total_money_owed, 2),
@@ -724,106 +852,7 @@ def view_balances():
         borrowed_details=borrowed_details
     )
 
-'''
-@main_bp.route('/settle_debt', methods=['POST'])
-@login_required
-def settle_debt():
-    try:
-        data = request.get_json()
-        paid_by = data.get('paid_by')
-        owed_by = data.get('owed_by')
-        amount_paid = data.get('amount_paid')
 
-        with get_session() as db_session:
-            # Find the unsettled debt
-            settlement = db_session.query(DebtSettlements).filter_by(
-                paid_by_id=paid_by, owed_by_id=owed_by, settled=False).first()
-
-            if settlement:
-                remaining_amount = settlement.amount - settlement.paid_amount
-
-                if amount_paid > remaining_amount:
-                    return jsonify({'error': 'Payment exceeds the remaining debt.'}), 400
-
-                # Update the paid amount
-                settlement.paid_amount += amount_paid
-
-                # If the full debt is paid, mark as settled
-                if settlement.paid_amount >= settlement.amount:
-                    settlement.settled = True
-                    settlement.paid_amount = settlement.amount  # Ensure paid_amount doesn't exceed amount
-
-                db_session.commit()
-                return jsonify({
-                    'success': True,
-                    'settled': settlement.settled,
-                    'remaining_amount': settlement.amount - settlement.paid_amount
-                }), 200
-
-            else:
-                return jsonify({'error': 'No outstanding debt found.'}), 400
-    except Exception as e:
-        logger.error(f"Error settling debt: {str(e)}")
-        return jsonify({'error': 'An error occurred while settling debt.'}), 500
-'''
-'''
-@main_bp.route('/settle_debt', methods=['POST'])
-@login_required
-def settle_debt_bk1():
-    try:
-        data = request.get_json(force=True)
-        print('Request data: ',data)
-        paid_by = data.get('paid_by')
-        owed_by = data.get('owed_by')
-        amount_paid = data.get('amount_paid')  # can be None for full
-        method = data.get('method', '')
-        note = data.get('note', '')
-
-        if amount_paid is None:
-            full = True
-        else:
-            amount_paid = Decimal(str(amount_paid))
-            if amount_paid <= 0:
-                return jsonify({'error': 'Invalid amount.'}), 400
-            full = False
-
-
-        with get_session() as db_session:
-            settlement = db_session.query(DebtSummary).filter_by(
-                paid_by_email=paid_by, owed_by_email=owed_by, settled=False).first()
-
-            if not settlement:
-                return jsonify({'error': 'No outstanding debt found.'}), 404
-
-            remaining = settlement.total_amount
-            if not full and amount_paid > remaining:
-                return jsonify({'error': 'Payment exceeds remaining debt.'}), 400
-
-            # Apply payment
-            if full or amount_paid >= remaining:
-                settlement.settled_amount = settlement.original_amount
-                settlement.total_amount = 0
-                settlement.settled = True
-                settlement.last_settled_on = datetime.utcnow()
-            else:
-                settlement.settled_amount += amount_paid
-                settlement.total_amount -= amount_paid
-                settlement.num_partial_settlements = (settlement.num_partial_settlements or 0) + 1
-
-            # Optional: Log or store method and note
-            if method or note:
-                settlement.notes = f"{method or ''} | {note or ''}".strip(" |")
-
-            db_session.commit()
-
-            return jsonify({
-                'success': True,
-                'settled': settlement.settled
-            })
-    except Exception as e:
-        logger.error(f"Error settling debt: {str(e)}")
-        return jsonify({'error': 'An error occurred while settling debt.'}), 500
-'''
 
 @main_bp.route('/settlement_history', methods=['GET'])
 @login_required
@@ -888,7 +917,7 @@ def settle_debt():
 
             if settlement.total_amount == 0:
                 settlement.settled = True
-                settlement.last_settled_on = datetime.utcnow()
+                settlement.last_settled_on = datetime.now(timezone.utc)
             else:
                 settlement.num_partial_settlements = (settlement.num_partial_settlements or 0) + 1
             db_session.flush()
@@ -901,11 +930,11 @@ def settle_debt():
                 amount_paid=actual_payment,
                 method=method,
                 note=note,
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now(timezone.utc)
             )
             print(f"Inserting into SettlementLog: {paid_by} → {owed_by}, {actual_payment}")
             db_session.add(log_entry)
-
+            mark_related_debts_as_settled(db_session, paid_by, owed_by)
             print(f"Entry added to session - now committing")
             db_session.commit()
             print(f"Commit successful")
@@ -1101,7 +1130,9 @@ def calculate_debts_basedON_billId(billid, db_session,current_user_id):
     """
     try:
         # Fetch all the unsettled settlements for the given bill
-        settlements = db_session.query(Settlements).filter_by(billId=billid, settled=False).all()
+        #settlements = db_session.query(Settlements).filter_by(billId=billid, settled=False).all()
+        settlements = db_session.query(Settlements).filter_by(billId=billid, settled=False,
+                                                              userid=current_user_id).all()
 
         # Create a dictionary to track the total amount owed by each user to another user
         debt_summary = {}
@@ -1147,9 +1178,43 @@ def calculate_debts_basedON_billId(billid, db_session,current_user_id):
         raise
 
 
+def fetch_debt_settlement_details(billid, userid):
+    """
+    Fetches debt settlement details (amount, paid_by, owed_by) for a specific bill ID
+    and user ID. Ensures data isolation per user.
+    """
+    try:
+        with get_session() as db_session:
+            logger.info(f"Fetching debt settlements for Bill ID: {billid} and User ID: {userid}")
+
+            # Define aliases for SplitInvoiceUser
+            PaidByUser = aliased(SplitInvoiceUser)
+            OwedByUser = aliased(SplitInvoiceUser)
+
+            # Query DebtSettlementsBills for the specified Bill ID and user ID
+            results = db_session.query(
+                DebtSettlementsBills.billId,
+                DebtSettlementsBills.amount,
+                PaidByUser.name.label('paid_by_name'),
+                OwedByUser.name.label('owed_by_name')
+            ).join(
+                PaidByUser, PaidByUser.email == DebtSettlementsBills.paid_by_email, isouter=True
+            ).join(
+                OwedByUser, OwedByUser.email == DebtSettlementsBills.owed_by_email, isouter=True
+            ).filter(
+                DebtSettlementsBills.billId == billid,
+                DebtSettlementsBills.created_by == userid  #  filtering by current user
+            ).all()
+
+            if not results:
+                logger.info(f"No debt settlement records found for Bill ID: {billid} and User ID: {userid}")
+            return results
+    except Exception as e:
+        logger.error(f"Error fetching debt settlement details for Bill ID {billid} and User ID {userid}: {str(e)}")
+        return []
 
 
-
+'''
 def fetch_debt_settlement_details(billid):
     """
     Fetches debt settlement details (amount, paid_by, owed_by) for a specific bill ID
@@ -1182,27 +1247,26 @@ def fetch_debt_settlement_details(billid):
     except Exception as e:
         logger.error(f"Error fetching debt settlement details for Bill ID {billid}: {str(e)}")
         return []
+'''
 
 def update_debt_summary(db_session):
     """
     Update the DebtSummary table with the latest totals from DebtSettlementsBills.
+    Reopens settled debts if new amounts are added.
     """
     try:
-        # Calculate totals for all user pairs
         totals = db_session.query(
             DebtSettlementsBills.paid_by_email,
             DebtSettlementsBills.owed_by_email,
             func.sum(DebtSettlementsBills.amount).label('total_amount')
         ).filter(
-            DebtSettlementsBills.settled == 0
+            DebtSettlementsBills.settled == False
         ).group_by(
             DebtSettlementsBills.paid_by_email,
             DebtSettlementsBills.owed_by_email
         ).all()
 
-        # Update DebtSummary table
         for paid_by_email, owed_by_email, total_amount in totals:
-            # Insert or update the DebtSummary table
             debt_summary = db_session.query(DebtSummary).filter_by(
                 paid_by_email=paid_by_email,
                 owed_by_email=owed_by_email
@@ -1210,24 +1274,43 @@ def update_debt_summary(db_session):
 
             if debt_summary:
                 # Update existing record
+                previous_total = debt_summary.total_amount or 0
+                previous_original = debt_summary.original_amount or 0
+
+                # Update current values
                 debt_summary.total_amount = total_amount
-                debt_summary.last_updated = datetime.now()
+
+                # If this is a "reopen", increase original_amount
+                if total_amount > previous_total:
+                    debt_summary.original_amount = float(previous_original) + (float(total_amount) - float(previous_total))
+
+
+                # If it was marked settled, reopen it
+                if debt_summary.settled:
+                    debt_summary.settled = False
+
+                debt_summary.last_updated = datetime.utcnow()
             else:
                 # Insert new record
                 new_summary = DebtSummary(
                     paid_by_email=paid_by_email,
                     owed_by_email=owed_by_email,
                     total_amount=total_amount,
-                    last_updated=datetime.now()
+                    original_amount=total_amount,
+                    settled_amount=0,
+                    settled=False,
+                    last_updated=datetime.utcnow()
                 )
                 db_session.add(new_summary)
 
         db_session.commit()
         logger.info("DebtSummary table updated successfully.")
+
     except Exception as e:
         db_session.rollback()
         logger.error(f"Error updating DebtSummary table: {str(e)}")
         raise
+
 
 def settle_debt_summary(db_session, paid_by_email, owed_by_email, amount_paid, method=None, note=None):
     record = db_session.query(DebtSummary).filter_by(
@@ -1260,8 +1343,30 @@ def settle_debt_summary(db_session, paid_by_email, owed_by_email, amount_paid, m
         record.settled_amount += amount_paid
         record.num_partial_settlements += 1
 
-    record.last_settled_on = datetime.utcnow()
-    record.last_updated = datetime.utcnow()
+    record.last_settled_on = datetime.now(timezone.utc)
+    record.last_updated = datetime.now(timezone.utc)
 
     db_session.commit()
     return {'success': True, 'remaining_balance': record.total_amount}
+
+def mark_related_debts_as_settled(db_session, paid_by, owed_by):
+    # Mark bills
+    db_session.query(DebtSettlementsBills).filter_by(
+        paid_by_email=paid_by,
+        owed_by_email=owed_by,
+        settled=False
+    ).update({"settled": True}, synchronize_session='fetch')
+
+    # Mark summarized debts
+    db_session.query(DebtSettlements).filter_by(
+        paid_by_email=paid_by,
+        owed_by_email=owed_by,
+        settled=False
+    ).update({"settled": True}, synchronize_session='fetch')
+
+    # If you use a separate 'settlements' table too
+    db_session.query(Settlements).filter_by(
+        paid_by_email=paid_by,
+        owed_by_email=owed_by,
+        settled=False
+    ).update({"settled": True}, synchronize_session='fetch')

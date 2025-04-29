@@ -18,6 +18,8 @@ class Users(UserMixin, db.Model):
     username = Column(String(250), unique=True, nullable=False)
     password_hash = db.Column(db.String(250), nullable=False)  # Renamed column
     is_admin = Column(Boolean, default=False)  # Admin flag
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
     @property
     def password(self):
         raise AttributeError("password is not a readable attribute.")
@@ -50,6 +52,7 @@ class SplitInvoiceUser(db.Model):
         name = Column(String(100), nullable=False)
         userid = Column(Integer, ForeignKey('USERDATA.userid'),
                         nullable=False)  # Link to the user who added this person
+        created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 
 class SplitInvoiceDetail(db.Model):
@@ -60,6 +63,7 @@ class SplitInvoiceDetail(db.Model):
     shared_with = Column(String(100), nullable=False)  # Comma-separated list of emails
     userid = Column(Integer, ForeignKey('USERDATA.userid'), nullable=False)  # Link to the user
     amount = Column(Float)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 
 class Settlements(db.Model):
@@ -73,6 +77,7 @@ class Settlements(db.Model):
     amount = Column(Float)
     settled = Column(Boolean, default=False)
     userid = Column(Integer, ForeignKey('USERDATA.userid'), nullable=False)  # Link to the user
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     # Relationships to the SplitInvoiceUser table
     # Relationships to SplitInvoiceUsers
 
@@ -89,6 +94,8 @@ class DebtSettlements(db.Model):
     # Relationships
     paid_by = relationship('SplitInvoiceUser', foreign_keys=[paid_by_email], primaryjoin="DebtSettlements.paid_by_email == SplitInvoiceUser.email")
     owed_by = relationship('SplitInvoiceUser', foreign_keys=[owed_by_email], primaryjoin="DebtSettlements.owed_by_email == SplitInvoiceUser.email")
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     def __repr__(self):
         return f"<DebtSettlements(paid_by={self.paid_by_email}, owed_by={self.owed_by_email}, amount={self.amount}, settled={self.settled})>"
@@ -107,6 +114,8 @@ class DebtSettlementsBills(db.Model):
     # Relationships
     paid_by = relationship('SplitInvoiceUser', foreign_keys=[paid_by_email], primaryjoin="DebtSettlementsBills.paid_by_email == SplitInvoiceUser.email")
     owed_by = relationship('SplitInvoiceUser', foreign_keys=[owed_by_email], primaryjoin="DebtSettlementsBills.owed_by_email == SplitInvoiceUser.email")
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     def __repr__(self):
         return f"<DebtSettlementsBills(bill_id={self.billId}, paid_by={self.paid_by_email}, owed_by={self.owed_by_email}, amount={self.amount}, settled={self.settled})>"
@@ -175,7 +184,7 @@ def init_models():
         engine = current_app.engine  # Access the engine from the app context
         Base.prepare(engine, reflect=True)  # Reflect database schema
 
-        current_app.logger.info(f"Tables reflected: {list(Base.classes.keys())}")
+        #current_app.logger.info(f"Tables reflected: {list(Base.classes.keys())}")
         #models["User"] = Base.classes.get("USERDATA")  # Reflect USER_DATA table dynamically
         models["groceries"] = Base.classes.get("groceries")  # Reflect groceries table dynamically
 
@@ -184,7 +193,8 @@ def init_models():
         #else:
          #   models["User"].__table__.columns.keys()
         if models["groceries"]:
-            current_app.logger.info(f"groceries table columns: {[col.name for col in models['groceries'].__table__.columns]}")
+            #current_app.logger.info(f"groceries table columns: {[col.name for col in models['groceries'].__table__.columns]}")
+            print('\n ')
         else:
             raise Exception("groceries table not found in the database schema.")
     except Exception as e:

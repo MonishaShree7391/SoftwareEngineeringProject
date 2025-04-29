@@ -9,6 +9,9 @@
     <div class="signup-container">
     <img src="{{ url_for('static', filename='images/LOGO_SiranthaRechnunSplit.jpg') }}" alt="Logo" class="signup-logo">
     <h2>Register</h2>
+        {% if error %}
+            <p class="error-message" style="color: red;">{{ error }}</p>
+        {% endif %}
     <form action="{{ url_for('user.register') }}" method="POST">
         <label for="firstname">First Name:</label>
         <input type="text" id="firstname" name="firstname" required>
@@ -24,6 +27,7 @@
         <br>
         <button type="submit">Register</button>
     </form>
+
     <p>Already have an account? <a href="{{ url_for('user.login') }}">Login here</a>.</p>
     </div>
 </body>
