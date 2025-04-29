@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Invoices for {{ month.capitalize() }} {{ year }}</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body class="container mt-5">
+    <h2>Invoices for {{ month.capitalize() }} {{ year }}</h2>
+
+    {% if bills %}
+        <div class="row">
+            {% for bill in bills %}
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Bill ID: {{ bill.billId }}</h5>
+                        <p><strong>Shop:</strong> {{ bill.shop }}</p>
+                        <p><strong>Date:</strong> {{ bill.date }}</p>
+                        <p><strong>Total:</strong> €{{ bill.total }}</p>
+                        <a href="{{ bill.pdf_url }}" target="_blank" class="btn btn-sm btn-secondary mb-2">View PDF</a>
+                        <a href="{{ url_for('main.view_data') }}?billId={{ bill.billId }}" class="btn btn-sm btn-primary">View Details</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No invoices found.</p>
+    {% endif %}
+
+    <a href="{{ url_for('main.index') }}" class="btn btn-outline-dark">Back</a>
+</body>
+</html>

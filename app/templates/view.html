@@ -99,15 +99,49 @@
             <div class="col-md-3 ">
                 <div class="view-invoices-container">
                 <div class="form-section">
-                    <h2>View Invoices</h2>
-                    <form id="view-form" action="{{ url_for('main.view_data_by_date') }}" method="get">
-                        <div class="form-group">
-                            <label for="date">Select Date:</label>
-                            <input type="date" id="date" name="date" class="form-control" required>
-                        </div>
-                            <button type="submit" class="custom-btn">View Data</button>
+                     <h2>View Invoices</h2>
+                        <form id="view-form" class="form-submit">
+                            <label for="datePickerView">Select Date:</label>
+                            <input type="date" id="datePickerView" class="date-picker" name="datePicker" required><br><br>
+
+
+                            <!-- Hidden fields -->
+                            <input type="hidden" class="month-field" name="month">
+                            <input type="hidden" class="year-field" name="year">
+
+                            <!-- Button with ID -->
+                             <button type="button" class="custom-btn" id="view-data-btn">View Data</button>
                         </form>
+                     <hr>
+
+                    <!-- View by Month -->
+                   <form id="view-by-month-form" action="{{ url_for('main.view_invoices_by_month') }}" method="get">
+                        <label for="year">Select Year:</label>
+                        <select id="year" name="year" class="form-control" required>
+                            <option value="">Loading years...</option>
+                        </select><br>
+
+                        <label for="month">Select Month:</label>
+                        <select id="month" name="month" class="form-control" required disabled>
+                            <option value="">Select a year first</option>
+                        </select><br>
+
+                        <button type="submit" class="custom-btn">View All Invoices</button>
+                    </form>
                     </div>
+                </div>
+                    
+
+                <!-- No Records Modal -->
+                <div class="modal fade" id="noRecordsModal" tabindex="-1" role="dialog" aria-labelledby="noRecordsModalLabel" aria-hidden="true">
+                  <div class="modal-dialog modal-dialog-centered" role="document">
+                    <div class="modal-content">
+                      <div class="modal-body text-center">
+                        <p id="no-records-message" class="font-weight-bold text-danger"></p>
+                        <button type="button" class="btn btn-secondary mt-2" data-dismiss="modal" >OK</button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <p>OR</p>
@@ -124,8 +158,8 @@
                         <input type="date" id="datePicker" name="datePicker" required><br><br>
 
                         <!-- Hidden fields for month and year -->
-                        <input type="hidden" id="month" name="month">
-                        <input type="hidden" id="year" name="year">
+                        <input type="hidden" class="month" name="month">
+                        <input type="hidden" class="year" name="year">
 
                         <label for="NameOfTheShop">Shop Name:</label>
                         <input type="text" id="NameOfTheShop" name="NameOfTheShop" required><br><br>
@@ -138,7 +172,25 @@
             </div>
         </div>
     </div>
-
+            <!-- Modal -->
+    <div class="modal fade" id="billExistsModal" tabindex="-1" role="dialog" aria-labelledby="billExistsModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="billExistsModalLabel">Bill Already Exists</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body text-center">
+            <p id="bill-exists-message" class="text-danger font-weight-bold"></p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">OK</button>
+          </div>
+        </div>
+      </div>
+    </div>
     <!-- Split Bill Modal -->
     <div class="modal fade" id="splitBillModal" tabindex="-1" aria-labelledby="splitBillModalLabel" aria-hidden="true">
         <div class="modal-dialog">
@@ -164,6 +216,9 @@
             </div>
         </div>
     </div>
+    <div style="position: absolute; top: 10px; left: 10px; z-index: 999;">
+        <a href="{{ url_for('main.index') }}" class="btn-home" style="color: white;">🏠 Home</a>
+    </div>
 
     <!-- Bootstrap JS for responsiveness (Optional) -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
@@ -171,36 +226,6 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <script>
-        // Feature 5: Fetch month and year from the calendar view
-         // Store the selected date in sessionStorage to retain it after page reloads
-            document.getElementById("datePicker").addEventListener("change", function() {
-            const selectedDate = new Date(this.value);
-            if (!selectedDate || isNaN(selectedDate)) {
-            alert("Please select a valid date.");
-            return;
-            }
-            const month = selectedDate.toLocaleString('default', { month: 'long' }).toLowerCase();
-            const year = selectedDate.getFullYear();
-
-            // Set the values in hidden fields
-            document.getElementById("month").value = month;
-            document.getElementById("year").value = year;
-            console.log("Selected Month:", month, "Selected Year:", year);
-        });
-        document.getElementById("upload-form").addEventListener("submit", function(event) {
-        const filename = document.getElementById("filename").value;
-        const NameOfTheShop = document.getElementById("NameOfTheShop").value;
-        const month = document.getElementById("month").value;
-        const year = document.getElementById("year").value;
-
-        if (!filename || !NameOfTheShop || !month || !year) {
-            alert("Please fill all required fields before uploading.");
-            event.preventDefault(); // Stop form submission
-            return;
-        }
-
-        console.log("Form Submitted with:", { filename, NameOfTheShop, month, year });
-    });
         // Feature 4: Check if the filename already exists
         document.getElementById("check-filename-btn").addEventListener("click", function() {
             const filename = document.getElementById("filename").value;
@@ -231,6 +256,169 @@
                 console.error("Error checking filename:", error);
             });
         });
+
+        // Feature 5: Fetch month and year from the calendar view
+
+        function handleDateChange(event) {
+        const datePicker = event.target; // Get the element that triggered the event
+        const selectedDate = new Date(datePicker.value);
+
+        if (!selectedDate || isNaN(selectedDate)) {
+            alert("Please select a valid date.");
+            return;
+        }
+
+        const month = selectedDate.toLocaleString('default', { month: 'long' }).toLowerCase();
+        const year = selectedDate.getFullYear();
+
+        // Find corresponding hidden fields in the same form
+        const form = datePicker.closest("form");
+        if (form) {
+            const monthField = form.querySelector(".month, .month-field");
+            const yearField = form.querySelector(".year, .year-field");
+
+            if (monthField) monthField.value = month;
+            if (yearField) yearField.value = year;
+
+            console.log(`Updated Form: ${form.id} - Month: ${month}, Year: ${year}`);
+        }
+        }
+
+    function handleFormSubmit(event) {
+        const form = event.target;
+        const filename = form.querySelector(".filename-field")?.value;
+        const NameOfTheShop = form.querySelector(".shop-field")?.value;
+        const month = form.querySelector(".month-field")?.value;
+        const year = form.querySelector(".year-field")?.value;
+
+        if (!month || !year) {
+            alert("Please select a date before submitting.");
+            event.preventDefault(); // Stop form submission
+            return;
+        }
+
+        console.log(`Form Submitted: ${form.id}`, { filename, NameOfTheShop, month, year });
+    }
+
+    // Attach event listeners dynamically
+    document.querySelectorAll(".date-picker").forEach(datePicker => {
+        datePicker.addEventListener("change", handleDateChange);
+    });
+
+    document.querySelectorAll(".form-submit").forEach(form => {
+        form.addEventListener("submit", handleFormSubmit);
+    });
+     //Feature: No data found
+        document.getElementById("view-data-btn").addEventListener("click", function () {
+        const date = document.getElementById("datePickerView").value;
+        if (!date) {
+            alert("Please select a date.");
+        return;
+        }
+
+        fetch(`/view_data_by_date?date=${encodeURIComponent(date)}`)
+    .then(async response => {
+        const contentType = response.headers.get("content-type");
+
+        if (contentType && contentType.includes("application/json")) {
+            const data = await response.json();
+
+            if (data.warning) {
+                document.getElementById("no-records-message").textContent = data.warning;
+                $('#noRecordsModal').modal('show'); // ✅ only shows modal
+            }
+        } else {
+            // This means it's an HTML redirect (likely to /view), so navigate
+            window.location.href = "/view";
+        }
+    })
+    .catch(error => {
+        console.error("Error:", error);
+        alert("Something went wrong while fetching data.");
+    });
+    });
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const yearSelect = document.getElementById('year');
+            const monthSelect = document.getElementById('month');
+
+            // Fetch and populate year dropdown
+            fetch('/get_invoice_years')
+                .then(res => res.json())
+                .then(data => {
+                    yearSelect.innerHTML = '<option value="">Select Year</option>';
+                    data.years.forEach(year => {
+                        const opt = document.createElement('option');
+                        opt.value = year;
+                        opt.textContent = year;
+                        yearSelect.appendChild(opt);
+                    });
+                })
+                .catch(err => {
+                    console.error('Error fetching years:', err);
+                });
+
+            // When year is selected, fetch months
+            yearSelect.addEventListener('change', function () {
+                const selectedYear = this.value;
+                if (!selectedYear) return;
+
+                fetch(`/get_invoice_months/${selectedYear}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        monthSelect.innerHTML = '';
+                        if (data.months.length > 0) {
+                            monthSelect.disabled = false;
+                            monthSelect.innerHTML = '<option value="">Select Month</option>';
+                            data.months.forEach(month => {
+                                const opt = document.createElement('option');
+                                opt.value = month;
+                                opt.textContent = month.charAt(0).toUpperCase() + month.slice(1);
+                                monthSelect.appendChild(opt);
+                            });
+                        } else {
+                            monthSelect.innerHTML = '<option>No months available</option>';
+                            monthSelect.disabled = true;
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Error fetching months:', err);
+                        monthSelect.innerHTML = '<option>Error loading months</option>';
+                        monthSelect.disabled = true;
+                    });
+            });
+        });
+
+            // Feature: Bill already exist
+        document.getElementById("upload-form").addEventListener("submit", function(event) {
+    event.preventDefault();  // Prevent default form submission
+
+    const form = event.target;
+    const formData = new FormData(form); // ✅ properly initialized
+
+    fetch("/upload", {
+        method: "POST",
+        body: formData
+    })
+    .then(async response => {
+        const contentType = response.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+            const data = await response.json();
+            if (data.Bill_exists) {
+                document.getElementById("bill-exists-message").textContent = data.warning;
+                $('#billExistsModal').modal('show');
+            } else if (data.success) {
+                alert("File uploaded successfully.");
+                window.location.href = "/view"; // or wherever
+            }
+        } else {
+            window.location.href = "/view"; // fallback if response is HTML
+        }
+    })
+    .catch(error => {
+        console.error("Upload error:", error);
+    });
+});
     </script>
 </body>
 </html>
