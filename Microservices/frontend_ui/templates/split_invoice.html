@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Split Invoice</title>
+  <link rel="stylesheet" href="/static/css/styles.css" />
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <style>
+        .container {
+            margin-top: 20px;
+        }
+        .left-section {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 2px 2px 12px rgba(0, 0, 0, 0.1);
+        }
+        .right-section {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 2px 2px 12px rgba(0, 0, 0, 0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+            width: 100%;
+        }
+        .shareWithCheckboxes label {
+            display: block;
+        }
+        .table th, .table td {
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+  <header>
+    <nav>
+      <ul>
+        <li><a href="/index.html">Dashboard</a></li>
+        <li><a href="/view_invoices_month.html">My Invoices</a></li>
+        <li><a href="/balances.html">Balances</a></li>
+        <li><a href="#" id="logout-link">Logout</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <div class="container">
+    <h1 class="text-center">Bill ID: <span id="bill-id"></span></h1>
+    <div class="row mt-4">
+      <div class="col-md-4 left-section">
+        <h2>Split Invoice</h2>
+
+        <div class="form-group">
+          <label for="userSelection">Select Users to Split With:</label>
+          <select id="userSelection" class="form-control" multiple></select>
+          <button type="button" class="btn btn-secondary mt-2" id="addUsersButton">Add Selected Users</button>
+        </div>
+
+        <div class="form-section">
+          <h3>Add New User</h3>
+          <form id="addUserForm">
+            <div class="form-group">
+              <label for="email">Email:</label>
+              <input type="email" id="email" name="email" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label for="name">Name:</label>
+              <input type="text" id="name" name="name" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Add User</button>
+          </form>
+        </div>
+
+        <div class="form-group mt-4">
+          <label for="paid_by">Paid By:</label>
+          <select id="paid_by" name="paid_by" class="form-control" required></select>
+        </div>
+        <div class="form-group">
+          <input type="checkbox" id="overwrite" name="overwrite">
+          <label for="overwrite">Overwrite previous split if exists</label>
+        </div>
+        <button id="splitBillButton" class="btn btn-primary">Submit</button>
+      </div>
+
+      <div class="col-md-8 right-section">
+        <h2>Items to Split</h2>
+        <table class="table table-striped mt-3">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Quantity</th>
+              <th>Price</th>
+              <th>Share With</th>
+            </tr>
+          </thead>
+          <tbody id="item-table-body"></tbody>
+        </table>
+        <p id="split-status" style="font-weight: bold;"></p>
+      </div>
+    </div>
+  </div>
+<!-- Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script>
+const token = localStorage.getItem("token");
+const user = JSON.parse(localStorage.getItem("user"));
+if (!token || !user) window.location.href = "/login";
+
+const billId = new URLSearchParams(window.location.search).get("billId");
+document.getElementById("bill-id").textContent = billId;
+
+const paidBySelect = document.getElementById("paid_by");
+const userSelection = document.getElementById("userSelection");
+const tableBody = document.getElementById("item-table-body");
+const statusBox = document.getElementById("split-status");
+
+let month, year; // ✅ Declare globally so they are accessible after fetch
+
+Promise.all([
+  fetch(`/split/split_invoice?billId=${billId}`, {
+    headers: { Authorization: "Bearer " + token }
+  }).then(res => res.json()),
+  fetch("/split/my_split_users", {
+    headers: { Authorization: "Bearer " + token }
+  }).then(res => res.json())
+])
+.then(([itemsResponse, users]) => {
+  console.log("Fetched users:", users);
+  console.log("Fetched split_invoice response:", itemsResponse);
+
+  if (!Array.isArray(users)) {
+    statusBox.textContent = "Failed to load users.";
+    statusBox.style.color = "red";
+    console.error("Unexpected users format:", users);
+    return;
+  }
+
+  const items = itemsResponse.items;
+  if (!Array.isArray(items)) {
+    statusBox.textContent = "Failed to load invoice items.";
+    statusBox.style.color = "red";
+    console.error("Unexpected items format:", itemsResponse);
+    return;
+  }
+
+  // ✅ Assign to global variables
+  if (itemsResponse.date_info && typeof itemsResponse.date_info === "string") {
+    [year, month] = itemsResponse.date_info.split("-");
+  } else {
+    year = "";
+    month = "";
+  }
+
+  users.forEach(user => {
+    const option = document.createElement("option");
+    option.value = user.email;
+    option.textContent = user.name;
+    paidBySelect.appendChild(option);
+    userSelection.appendChild(option.cloneNode(true));
+  });
+
+  items.forEach((item, index) => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+        <td>${item.item}</td>
+        <td>${item.quantity}</td>
+        <td>${item.price}</td>
+        <td><div class="shareWithCheckboxes" id="shareWithContainer_${index}"></div></td>
+      `;
+    ;
+    tableBody.appendChild(row);
+  });
+})
+.catch(err => {
+  console.error("Error during fetch:", err);
+  statusBox.textContent = "An error occurred while loading the page.";
+  statusBox.style.color = "red";
+});
+
+document.getElementById("addUsersButton").addEventListener("click", () => {
+  const selected = Array.from(userSelection.selectedOptions).map(o => ({
+    email: o.value,
+    name: o.text
+  }));
+  document.querySelectorAll(".shareWithCheckboxes").forEach(container => {
+    selected.forEach(user => {
+      if (!container.querySelector(`input[value="${user.email}"]`)) {
+        const label = document.createElement("label");
+        label.innerHTML = `<input type="checkbox" value="${user.email}" checked> ${user.name}`;
+        container.appendChild(label);
+      }
+    });
+  });
+});
+
+document.getElementById("addUserForm").addEventListener("submit", function (e) {
+  e.preventDefault();
+  const email = document.getElementById("email").value;
+  const name = document.getElementById("name").value;
+  fetch("/split/add_split_invoice_user", {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + token,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ email, name })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success || data.message?.includes("added") || data.message?.includes("exists")) {
+      location.reload();
+    } else {
+      alert(data.error || data.message || "Failed to add user");
+    }
+  });
+});
+
+document.getElementById("splitBillButton").addEventListener("click", () => {
+  const paid_by = paidBySelect.value;
+  const overwrite = document.getElementById("overwrite").checked;
+  const items = [];
+
+  document.querySelectorAll("#item-table-body tr").forEach((row, idx) => {
+    const item = row.children[0].innerText;
+    const shared_with = Array.from(row.querySelectorAll("input[type=checkbox]:checked")).map(cb => cb.value);
+    items.push({ item, shared_with });
+  });
+
+  fetch("/split/split_invoice", {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + token,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ billId, paid_by, items, overwrite })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      statusBox.textContent = "Bill split successfully!";
+      statusBox.style.color = "green";
+
+      setTimeout(() => {
+        const redirectUrl = `/view?billId=${encodeURIComponent(billId)}`;
+        window.location.href = redirectUrl;
+      }, 1500);
+    } else if (data.warning) {
+      statusBox.textContent = data.warning;
+      statusBox.style.color = "orange";
+    } else {
+      statusBox.textContent = data.error || "Error splitting bill.";
+      statusBox.style.color = "red";
+    }
+  })
+  .catch(error => {
+    console.error("Split error:", error);
+    statusBox.textContent = "An error occurred while splitting the bill.";
+    statusBox.style.color = "red";
+  });
+});
+
+document.getElementById("logout-link").addEventListener("click", function (e) {
+  e.preventDefault();
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+  window.location.href = "/login";
+});
+</script>
+
+
+
+</body>
+</html>

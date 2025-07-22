@@ -1,0 +1,84 @@
+version: "3.9"
+
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      SA_PASSWORD: "2025Online"
+      ACCEPT_EULA: "Y"
+    networks:
+      - backend
+
+  authservice:
+    image: monishashree/authservice:latest
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_PORT: 1433
+      DB_USER: sa
+      DB_PASSWORD: "yourpassword"
+      DB_NAME: authdb
+      DB_DRIVER: "ODBC Driver 17 for SQL Server"
+      JWT_SECRET_KEY: "your-secret"
+      SECRET_KEY: "your-secret"
+    networks:
+      - backend
+
+  splitservice:
+    image: monishashree/splitservice:latest
+    depends_on:
+      - authservice
+    environment:
+      JWT_SECRET_KEY: "your-secret"
+      SECRET_KEY: "your-secret"
+    networks:
+      - backend
+
+  debtservice:
+    image: monishashree/debtservice:latest
+    depends_on:
+      - authservice
+    environment:
+      JWT_SECRET_KEY: "your-secret"
+      SECRET_KEY: "your-secret"
+    networks:
+      - backend
+
+  invoiceservice:
+    image: monishashree/invoiceservice:latest
+    depends_on:
+      - authservice
+      - splitservice
+      - debtservice
+    environment:
+      DB_HOST: db
+      DB_PORT: 1433
+      DB_USER: sa
+      DB_PASSWORD: "yourpassword"
+      DB_NAME: authdb
+      DB_DRIVER: "ODBC Driver 17 for SQL Server"
+      JWT_SECRET_KEY: "your-secret"
+      SECRET_KEY: "your-secret"
+    networks:
+      - backend
+
+  frontend:
+    image: monishashree/frontend_ui:latest
+    depends_on:
+      - authservice
+      - invoiceservice
+      - splitservice
+      - debtservice
+    environment:
+		#update the URL according to Azure containers
+      AUTH_SERVICE_URL: "http://authservice:5000"
+      INVOICE_SERVICE_URL: "http://invoiceservice:5002"
+      SPLIT_SERVICE_URL: "http://splitservice:5003"
+      DEBT_SERVICE_URL: "http://debtservice:5004"
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge

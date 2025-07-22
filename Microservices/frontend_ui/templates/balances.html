@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Your Balances</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="/static/css/styles.css" />
+</head>
+<body>
+  <!-- Toast -->
+  <div id="toast" class="alert alert-success" role="alert" style="display: none; position: fixed; top: 10px; right: 10px; z-index: 9999;"></div>
+
+  <!-- Home Button -->
+  <div style="position: absolute; top: 10px; left: 10px; z-index: 999;">
+    <a href="/index" class="btn-home">🏠 Home</a>
+  </div>
+
+  <div class="container mt-5">
+    <div class="text-right mb-3">
+      <a href="/settlement_history.html" class="btn btn-secondary">View Settlement History</a>
+    </div>
+
+    <!-- Balance Summary -->
+    <div class="card balance-card mb-4">
+      <div class="card-header"><h4 class="mb-0">Balance Summary</h4></div>
+      <div class="card-body row">
+        <div class="col-md-6">
+          <div class="alert alert-success">
+            <h5>Total Money Owed to You</h5>
+            <p class="h4" id="total-money-owed">€0.00</p>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="alert alert-warning">
+            <h5>Total Money You Owe</h5>
+            <p class="h4" id="total-money-borrowed">€0.00</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- You Owe Table -->
+    <div class="card mb-4">
+      <div class="card-header"><h4 class="mb-0">Money You Owe</h4></div>
+      <div class="card-body">
+        <table class="table table-hover" id="owe-table">
+          <thead><tr><th>Name</th><th>Email</th><th>Amount</th><th>Action</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <p class="no-data" id="no-owe-data" style="display: none;">No outstanding debts where you owe money.</p>
+      </div>
+    </div>
+
+    <!-- You Are Owed Table -->
+    <div class="card mb-4">
+      <div class="card-header"><h4 class="mb-0">Money Owed to You</h4></div>
+      <div class="card-body">
+        <table class="table table-hover" id="owed-table">
+          <thead><tr><th>Name</th><th>Email</th><th>Amount</th><th>Action</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <p class="no-data" id="no-owed-data" style="display: none;">No outstanding debts where others owe you money.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settle Modal -->
+  <div class="modal fade" id="settleModal" tabindex="-1" aria-labelledby="settleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Settle Debt</h5>
+          <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+        </div>
+        <div class="modal-body text-center">
+          <p id="instructionText"><strong>Click Full Settle</strong> to mark the entire debt as settled.<br><strong>Click Partial Settle</strong> to enter an amount.</p>
+          <input type="number" step="any" min="0" id="partialAmountInput" class="form-control d-none my-2" placeholder="Enter partial amount">
+          <input type="text" id="methodInput" class="form-control d-none my-2" placeholder="Payment method (e.g. UPI, cash)">
+          <input type="text" id="noteInput" class="form-control d-none my-2" placeholder="Optional note (e.g. via GPay)">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-success" id="fullSettleBtn">Full Settle</button>
+          <button type="button" class="btn btn-warning" id="partialSettleBtn">Partial Settle</button>
+          <button type="button" class="btn btn-primary d-none" id="confirmSettleBtn">Confirm Settlement</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    const token = localStorage.getItem("token");
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (!token || !user) window.location.href = "/login";
+
+    let currentPaidBy = "", currentOwedBy = "", currentMaxAmount = 0, isFullSettlement = false;
+    const partialInput = document.getElementById("partialAmountInput");
+    const methodInput = document.getElementById("methodInput");
+    const noteInput = document.getElementById("noteInput");
+
+    const showToast = (msg, type = 'success') => {
+      const toast = document.getElementById("toast");
+      toast.textContent = msg;
+      toast.className = `alert alert-${type}`;
+      toast.style.display = 'block';
+      setTimeout(() => toast.style.display = 'none', 3000);
+    };
+
+    function resetModal() {
+      isFullSettlement = false;
+      partialInput.value = "";
+      methodInput.value = "";
+      noteInput.value = "";
+      document.getElementById("instructionText").classList.remove("d-none");
+      partialInput.classList.add("d-none");
+      methodInput.classList.add("d-none");
+      noteInput.classList.add("d-none");
+      document.getElementById("confirmSettleBtn").classList.add("d-none");
+      document.getElementById("fullSettleBtn").classList.remove("d-none");
+      document.getElementById("partialSettleBtn").classList.remove("d-none");
+    }
+
+    document.getElementById("fullSettleBtn").addEventListener("click", () => {
+      isFullSettlement = true;
+      partialInput.classList.add("d-none");
+      methodInput.classList.remove("d-none");
+      noteInput.classList.remove("d-none");
+      document.getElementById("confirmSettleBtn").classList.remove("d-none");
+      document.getElementById("fullSettleBtn").classList.add("d-none");
+      document.getElementById("partialSettleBtn").classList.add("d-none");
+    });
+
+    document.getElementById("partialSettleBtn").addEventListener("click", () => {
+      isFullSettlement = false;
+      partialInput.classList.remove("d-none");
+      methodInput.classList.remove("d-none");
+      noteInput.classList.remove("d-none");
+      document.getElementById("confirmSettleBtn").classList.remove("d-none");
+      document.getElementById("instructionText").classList.add("d-none");
+      document.getElementById("fullSettleBtn").classList.add("d-none");
+      document.getElementById("partialSettleBtn").classList.add("d-none");
+    });
+
+    document.getElementById("confirmSettleBtn").addEventListener("click", async () => {
+      const method = methodInput.value || "unspecified";
+      const note = noteInput.value || "";
+
+      const payload = {
+        paid_by: currentPaidBy,
+        owed_by: currentOwedBy,
+        full_settlement: isFullSettlement,
+        method,
+        note
+      };
+
+      if (!isFullSettlement) {
+        const amountStr = partialInput.value;
+        const amount = parseFloat(amountStr);
+        if (!amountStr || isNaN(amount)) return showToast("❌ Invalid amount", "danger");
+        if (amount <= 0 || amount > currentMaxAmount) return showToast(`❌ Invalid amount (must be between 0 and ${currentMaxAmount})`, "danger");
+        payload.amount_paid = amount;
+      } else {
+        payload.amount_paid = null;
+      }
+
+      try {
+        const res = await fetch("/debt/settle_debt", {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(isFullSettlement ? '✅ Debt fully settled!' : '✅ Partial payment recorded!');
+          setTimeout(() => location.reload(), 2000);
+        } else {
+          showToast(`❌ ${data.error}`, 'danger');
+        }
+      } catch (err) {
+        showToast("❌ Network error", "danger");
+      }
+    });
+
+    fetch("/debt/balances", {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById("total-money-owed").textContent = `€${parseFloat(data.total_money_owed || 0).toFixed(2)}`;
+      document.getElementById("total-money-borrowed").textContent = `€${parseFloat(data.total_money_borrowed || 0).toFixed(2)}`;
+
+      const oweTbody = document.querySelector("#owe-table tbody");
+      const owedTbody = document.querySelector("#owed-table tbody");
+      oweTbody.innerHTML = "";
+      owedTbody.innerHTML = "";
+
+      document.getElementById("no-owe-data").style.display = data.owed_details.length === 0 ? "block" : "none";
+      document.getElementById("no-owed-data").style.display = data.borrowed_details.length === 0 ? "block" : "none";
+
+      data.owed_details.forEach(d => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${d.name}</td>
+          <td>${d.email}</td>
+          <td>${d.amount}</td>
+          <td>
+            ${d.amount > 0 ? `<button class='btn btn-primary settle-btn' data-paidby='${d.email}' data-owedby='${user.username}' data-amount='${d.amount}' data-toggle='modal' data-target='#settleModal'>Settle</button>` : `<span class='text-success font-weight-bold'>✅ Settled</span>`}
+          </td>`;
+        oweTbody.appendChild(row);
+      });
+
+      data.borrowed_details.forEach(d => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${d.name}</td>
+          <td>${d.email}</td>
+          <td>${d.amount}</td>
+          <td>
+            ${d.amount > 0 ? `<button class='btn btn-primary settle-btn' data-paidby='${user.username}' data-owedby='${d.email}' data-amount='${d.amount}' data-toggle='modal' data-target='#settleModal'>Settle</button>` : `<span class='text-success font-weight-bold'>✅ Settled</span>`}
+          </td>`;
+        owedTbody.appendChild(row);
+      });
+
+      document.querySelectorAll(".settle-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          currentPaidBy = btn.dataset.paidby;
+          currentOwedBy = btn.dataset.owedby;
+          currentMaxAmount = parseFloat(btn.dataset.amount);
+          resetModal();
+        });
+      });
+    })
+    .catch(err => {
+      console.error("Fetch failed", err);
+      showToast("❌ Failed to load balances", "danger");
+    });
+  </script>
+</body>
+</html>

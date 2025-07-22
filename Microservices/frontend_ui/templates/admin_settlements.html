@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin: Settlement Overview</title>
+  <link rel="stylesheet" href="/static/css/styles.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body>
+ <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
+    h1, h2 { text-align: center; }
+    .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { padding: 10px; border-bottom: 1px solid #ddd; text-align: center; }
+    button { padding: 8px 12px; border: none; background: #007bff; color: white; border-radius: 5px; cursor: pointer; }
+    button:hover { background: #0056b3; }
+</style>
+  <header>
+    <nav>
+      <ul>
+        <li><a href="/admin_dashboard.html">Dashboard</a></li>
+        <li><a href="/settlement_history.html">Settlement Log</a></li>
+        <li><a href="#" id="logout-link">Logout</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main class="container">
+    <h2>Admin: All Settlements</h2>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Paid By</th>
+          <th>Owed By</th>
+          <th>Total Amount (€)</th>
+          <th>Settled Amount (€)</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="settlement-table-body">
+        <tr><td colspan="5">Loading...</td></tr>
+      </tbody>
+    </table>
+  </main>
+
+  <script>
+  const token = localStorage.getItem("token");
+  const user = JSON.parse(localStorage.getItem("user"));
+  const headers = {
+    Authorization: "Bearer " + token
+  };
+  if (!token || !user || !user.is_admin) {
+    window.location.href = "/login";
+  }
+
+  fetch("/admin/api/settlements", {
+    headers: { Authorization: "Bearer " + token }
+  })
+  .then(res => {
+    console.log("📡 Fetch response status:", res.status);
+    return res.json();
+  })
+  .then(data => {
+    console.log("✅ Settlement data received:", data);
+
+    const tbody = document.getElementById("settlement-table-body");
+    tbody.innerHTML = "";
+
+    if (!Array.isArray(data) || data.length === 0) {
+      console.warn("⚠️ No settlement records found.");
+      tbody.innerHTML = "<tr><td colspan='5'>No settlement records found.</td></tr>";
+      return;
+    }
+
+    data.forEach(settlement => {
+      console.log("🧾 Rendering settlement row:", settlement);
+
+      const tr = document.createElement("tr");
+
+      const markBtn = settlement.settled
+        ? ""
+        : `<button onclick="markSettled(${settlement.id})">Mark as Settled</button>`;
+
+      const deleteBtn = `<button class="delete-btn" onclick="deleteSettlement(${settlement.id})">Delete</button>`;
+
+      tr.innerHTML = `
+        <td>${settlement.paid_by}</td>
+        <td>${settlement.owed_by}</td>
+        <td>${settlement.total_amount.toFixed(2)}</td>
+        <td>
+          ${settlement.settled
+            ? `<span class="settled">Settled</span>`
+            : `<span class="pending">Pending</span>`}
+        </td>
+        <td>${markBtn} ${deleteBtn}</td>
+      `;
+
+      tbody.appendChild(tr);
+    });  // ✅ <- This closing brace was missing!
+  })
+  .catch(err => {
+    console.error("❌ Failed to load settlements:", err);
+    document.getElementById("settlement-table-body").innerHTML =
+      "<tr><td colspan='5'>Error loading settlement data.</td></tr>";
+  });
+
+  function markSettled(settlementId) {
+    const token = localStorage.getItem("token");
+    fetch(`/admin/settlements/complete/${settlementId}`, {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + token
+      }
+    })
+    .then(res => res.json())
+    .then(data => {
+      console.log("✅ Marked as settled:", data);
+      location.reload();
+    })
+    .catch(err => {
+      console.error("❌ Failed to mark as settled:", err);
+      alert("Failed to mark settlement as complete.");
+    });
+  }
+
+  function deleteSettlement(settlementId) {
+    const token = localStorage.getItem("token");
+    fetch(`/admin/settlements/delete/${settlementId}`, {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + token
+      }
+    })
+    .then(res => res.json())
+    .then(data => {
+      console.log("🗑️ Deleted settlement:", data);
+      location.reload();
+    })
+    .catch(err => {
+      console.error("❌ Failed to delete settlement:", err);
+      alert("Failed to delete settlement.");
+    });
+  }
+</script>
+
+</body>
+</html>

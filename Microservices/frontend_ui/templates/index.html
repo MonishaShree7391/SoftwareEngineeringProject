@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload PDF or View Data</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <style>
+  .user-icon-container {
+    position: fixed;
+    top: 15px;
+    right: 20px;
+    z-index: 1000;
+  }
+
+  .user-dropdown-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid #ddd;
+    cursor: pointer;
+  }
+
+  .dropdown-menu {
+    position: fixed; /* use fixed instead of absolute */
+    top: 65px;        /* space below icon */
+    right: 20px;      /* align to the icon's right position */
+    display: none;
+    background: white;
+    border: 1px solid #ccc;
+    box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+    width: 150px;
+    text-align: center;
+    z-index: 9999;
+  }
+
+  .dropdown-menu a {
+    display: block;
+    padding: 10px;
+    text-decoration: none;
+    color: #333;
+  }
+
+  .dropdown-menu a:hover {
+    background-color: #f0f0f0;
+  }
+</style>
+
+</head>
+
+<body>
+  <!-- User Dropdown -->
+  <div class="user-icon-container">
+    <img src="/static/images/user_icon.png" alt="User" class="user-dropdown-icon" onclick="toggleUserDropdown()" />
+    <div class="dropdown-menu" id="userDropdown">
+      <a href="/profile">👤 Profile</a>
+      <a href="/settings">⚙️ Settings</a>
+      <a href="#" id="logout-link">🚪 Logout</a>
+    </div>
+  </div>
+
+  <div class="dashboard-container container">
+    <h1>Hello, <span id="user-name">User</span>!</h1>
+    <div class="options">
+      <button id="upload-btn">Upload a File</button>
+      <button id="view-btn">View Invoices</button>
+      <button id="view-balance-btn">View Balances</button>
+    </div>
+
+    <!-- Upload Section -->
+    <div id="upload-section" style="display: none;">
+      <form id="upload-form">
+        <input type="text" id="filename" name="filename" required placeholder="Filename">
+        <button type="button" id="check-filename-btn">Check Filename</button>
+        <div id="filename-check-message"></div>
+        <input type="text" id="NameOfTheShop" name="NameOfTheShop" required placeholder="Shop Name">
+        <input type="date" class="date-picker" name="datePicker" required>
+        <input type="hidden" class="month" name="month">
+        <input type="hidden" class="year" name="year">
+        <input type="file" id="file" name="file" required>
+        <input type="submit" value="Upload">
+      </form>
+    </div>
+
+    <!-- View Section -->
+    <div id="view-section" style="display: none;">
+      <form id="view-form" class="form-submit">
+        <input type="date" id="datePickerView" class="date-picker" name="datePicker" required>
+        <input type="hidden" class="month-field" name="month">
+        <input type="hidden" class="year-field" name="year">
+        <button type="button" id="view-data-btn">View Data</button>
+      </form>
+      <hr>
+      <form id="view-by-month-form">
+        <select id="year" name="year" class="form-control" required>
+          <option value="">Loading years...</option>
+        </select>
+        <select id="month" name="month" class="form-control" required disabled>
+          <option value="">Select a year first</option>
+        </select>
+        <button type="submit">View All Invoices</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const token = localStorage.getItem("token");
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (!token || !user) return window.location.href = "/login";
+
+    document.getElementById("user-name").textContent = user.firstname || user.username || "User";
+
+    // Dropdown toggle
+    function toggleUserDropdown() {
+      const menu = document.getElementById("userDropdown");
+      menu.style.display = menu.style.display === "block" ? "none" : "block";
+    }
+    window.toggleUserDropdown = toggleUserDropdown;
+
+    document.addEventListener("click", function (e) {
+      const menu = document.getElementById("userDropdown");
+      const icon = document.querySelector(".user-dropdown-icon");
+      if (!menu || !icon) return;
+      if (!menu.contains(e.target) && !icon.contains(e.target)) {
+        menu.style.display = "none";
+      }
+    });
+
+    document.getElementById("logout-link").addEventListener("click", function (e) {
+      e.preventDefault();
+      localStorage.clear();
+      window.location.href = "/login";
+    });
+
+    document.getElementById("upload-btn").onclick = () => {
+      document.getElementById("upload-section").style.display = "block";
+      document.getElementById("view-section").style.display = "none";
+    };
+
+    document.getElementById("view-btn").onclick = () => {
+      document.getElementById("upload-section").style.display = "none";
+      document.getElementById("view-section").style.display = "block";
+    };
+
+    document.getElementById("view-balance-btn").onclick = () => {
+      fetch("/debt/balances", {
+        headers: { "Authorization": "Bearer " + token }
+      })
+      .then(res => {
+        if (!res.ok) throw new Error("Failed to fetch balances");
+        return res.json();
+      })
+      .then(data => {
+        localStorage.setItem("balances", JSON.stringify(data));
+        window.location.href = "/balances.html";
+      })
+      .catch(err => {
+        alert("Could not load balances.");
+        console.error(err);
+      });
+    };
+
+    document.getElementById("check-filename-btn").onclick = () => {
+      const filename = document.getElementById("filename").value;
+      if (!filename) return alert("Enter a filename.");
+      fetch("/invoice/check_filename", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + token
+        },
+        body: JSON.stringify({ filename })
+      })
+      .then(res => res.json())
+      .then(data => {
+        const msg = document.getElementById("filename-check-message");
+        msg.textContent = data.exists ? "Filename already exists." : "Filename is available.";
+        msg.className = data.exists ? "text-danger" : "text-success";
+      });
+    };
+
+    document.getElementById("upload-form").addEventListener("submit", function (e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+      fetch("/invoice/upload", {
+        method: "POST",
+        headers: { "Authorization": "Bearer " + token },
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.Bill_exists) {
+          alert("Bill already exists.");
+        } else if (data.success) {
+          alert("Upload successful.");
+          window.location.href = `/view?billId=${encodeURIComponent(data.billId)}`;
+        } else {
+          alert(`Error: ${data.error}`);
+        }
+      });
+    });
+
+    document.getElementById("view-data-btn").onclick = () => {
+      const date = document.getElementById("datePickerView").value;
+      if (!date) return alert("Select a date.");
+      fetch(`/invoice/view_data_by_date?date=${encodeURIComponent(date)}`, {
+        headers: { "Authorization": "Bearer " + token }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.redirect) window.location.href = data.redirect;
+        else if (data.warning) alert(data.warning);
+      });
+    };
+
+    document.querySelectorAll(".date-picker").forEach(dp => {
+      dp.addEventListener("change", function () {
+        const date = new Date(this.value);
+        const form = this.closest("form");
+        if (!isNaN(date)) {
+          form.querySelector(".month").value = date.toLocaleString('default', { month: 'long' }).toLowerCase();
+          form.querySelector(".year").value = date.getFullYear();
+        }
+      });
+    });
+
+    // Fetch years
+    fetch("/invoice/get_invoice_years", {
+      headers: { "Authorization": "Bearer " + token }
+    })
+    .then(res => res.json())
+    .then(data => {
+      const yearSelect = document.getElementById("year");
+      yearSelect.innerHTML = '<option value="">Select Year</option>';
+      data.years.forEach(year => {
+        const opt = document.createElement("option");
+        opt.value = year;
+        opt.textContent = year;
+        yearSelect.appendChild(opt);
+      });
+    });
+
+    // Fetch months when year selected
+    document.getElementById("year").addEventListener("change", function () {
+      const year = this.value;
+      const monthSelect = document.getElementById("month");
+      fetch(`/invoice/get_invoice_months/${year}`, {
+        headers: { "Authorization": "Bearer " + token }
+      })
+      .then(res => res.json())
+      .then(data => {
+        monthSelect.disabled = false;
+        monthSelect.innerHTML = '<option value="">Select Month</option>';
+        data.months.forEach(month => {
+          const opt = document.createElement("option");
+          opt.value = month;
+          opt.textContent = month.charAt(0).toUpperCase() + month.slice(1);
+          monthSelect.appendChild(opt);
+        });
+      });
+    });
+
+    // Handle view-by-month form
+    document.getElementById("view-by-month-form").addEventListener("submit", function (e) {
+      e.preventDefault();
+      const year = document.getElementById("year").value;
+      const month = document.getElementById("month").value;
+      if (!month || !year) return alert("Please select both year and month.");
+      window.location.href = `/view_invoices_month.html?month=${encodeURIComponent(month)}&year=${encodeURIComponent(year)}`;
+    });
+  });
+  </script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Upload Invoice</title>
+  <link rel="stylesheet" href="/static/css/styles.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body>
+  <header>
+    <img src="/static/images/LOGO_SiranthaRechnunSplit.jpg" alt="Logo" class="logo" />
+    <nav>
+      <ul>
+        <li><a href="/index.html">Dashboard</a></li>
+        <li><a href="/view_invoices_month.html">My Invoices</a></li>
+        <li><a href="#" id="logout-link">Logout</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <h2>Upload Invoice</h2>
+    <form id="upload-form" enctype="multipart/form-data">
+      <label for="NameOfTheShop">Shop Name:</label>
+      <input type="text" name="NameOfTheShop" id="NameOfTheShop" required>
+
+      <label for="month">Month:</label>
+      <input type="text" name="month" id="month" required>
+
+      <label for="year">Year:</label>
+      <input type="text" name="year" id="year" required>
+
+      <label for="filename">Invoice Filename (without extension):</label>
+      <input type="text" name="filename" id="filename" required>
+
+      <label for="file">Upload PDF File:</label>
+      <input type="file" name="file" id="file" accept=".pdf" required>
+
+      <button type="submit">Upload Invoice</button>
+    </form>
+
+    <p id="upload-status" style="margin-top: 1em; font-weight: bold;"></p>
+  </main>
+
+  <script>
+    const token = localStorage.getItem("token");
+    if (!token) {
+      window.location.href = "/login";
+    }
+
+    document.getElementById("upload-form").addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const formData = new FormData();
+      formData.append("NameOfTheShop", document.getElementById("NameOfTheShop").value);
+      formData.append("month", document.getElementById("month").value);
+      formData.append("year", document.getElementById("year").value);
+      formData.append("filename", document.getElementById("filename").value);
+      formData.append("file", document.getElementById("file").files[0]);
+
+      fetch("/invoice/upload", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + token
+        },
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        const status = document.getElementById("upload-status");
+        if (data.success) {
+          status.style.color = "green";
+          status.textContent = "Invoice uploaded successfully!";
+        } else if (data.warning) {
+          status.style.color = "orange";
+          status.textContent = data.warning;
+        } else {
+          status.style.color = "red";
+          status.textContent = data.error || "Upload failed.";
+        }
+      })
+      .catch(error => {
+        console.error("Upload error:", error);
+        document.getElementById("upload-status").textContent = "An error occurred.";
+      });
+    });
+
+    document.getElementById("logout-link").addEventListener("click", function (e) {
+      e.preventDefault();
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      window.location.href = "/login";
+    });
+  </script>
+</body>
+</html>

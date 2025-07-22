@@ -1,0 +1,48 @@
+{
+  "shopName": "REWE",
+  "address": "Peterson Warenhandels GmbH&Co.KG, Sch\u00f6nwalder Stra\u00dfe 32 13585 Berlin/Spandau",
+  "invoiceNumber": "4477",
+  "totalSum": 13.54,
+  "items": [
+    {
+      "item": "VOLLKORNTOAST",
+      "quantity": 1,
+      "price": 0.99
+    },
+    {
+      "item": "TOFU NATUR",
+      "quantity": 1,
+      "price": 2.19
+    },
+    {
+      "item": "AVOCADO VORGER.",
+      "quantity": 1,
+      "price": 1.11
+    },
+    {
+      "item": "BIO DINKELMEHL",
+      "quantity": 2.0,
+      "unit_price": 1.49,
+      "price": 2.98
+    },
+    {
+      "item": "INST.NUD.GEMUESE 1,38 B 2 Stk x 0,69 MONSTER PUNCH",
+      "quantity": 1,
+      "price": 0.89
+    },
+    {
+      "item": "PFAND 0,25 EURO",
+      "quantity": 1,
+      "price": 0.25
+    },
+    {
+      "item": "* MR.MUSCLE P.GEL",
+      "quantity": 1,
+      "price": 3.75
+    }
+  ],
+  "date": "04.03.2025",
+  "billId": "R_04032025_1.pdf",
+  "month": "march",
+  "year": "2025"
+}

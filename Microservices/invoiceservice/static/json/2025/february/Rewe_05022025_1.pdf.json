@@ -1,0 +1,27 @@
+{
+  "shopName": "REWE",
+  "address": "Peterson Warenhandels GmbH&Co.KG, Sch\u00f6nwalder Stra\u00dfe 32 13585 Berlin/Spandau",
+  "invoiceNumber": "DE217623660",
+  "totalSum": 5.17,
+  "items": [
+    {
+      "item": "TOFU NATUR",
+      "quantity": 1,
+      "price": 2.19
+    },
+    {
+      "item": "TOMATE",
+      "quantity": 1,
+      "price": 1.19
+    },
+    {
+      "item": "STEINOFEN PIZZA",
+      "quantity": 1,
+      "price": 1.79
+    }
+  ],
+  "date": "05.02.2025",
+  "billId": "Rewe_05022025_1.pdf",
+  "month": "february",
+  "year": "2025"
+}
