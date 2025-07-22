@@ -12,6 +12,9 @@ A modern, microservices-based web application for splitting grocery bills with r
 
 **Sirantha RechnungSplit** simplifies shared grocery expense tracking by enabling users to upload PDF invoices, extract itemized data via OCR, and split costs between registered and non-registered users. It supports debt tracking, full/partial settlements, and admin-level user control—all backed by a scalable microservices architecture deployed on **Microsoft Azure**.
 
+Access to the application:https://frontend-ui.victoriousriver-e1350c51.westus2.azurecontainerapps.io/login
+if admin: https://frontend-ui.victoriousriver-e1350c51.westus2.azurecontainerapps.io/admin_dashboard.html
+
 ---
 
 ## 🧩 Microservices Architecture
