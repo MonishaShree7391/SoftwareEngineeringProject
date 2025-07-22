@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <title>user</title>
+</head>
+
+<body>
+<!-- User Icon Dropdown Component -->
+<div class="user-icon-container">
+  <img src="/static/images/user_icon.png" alt="User Icon" class="user-dropdown-icon" onclick="toggleUserDropdown()">
+  <div class="dropdown-menu" id="userDropdown">
+    <a href="/profile.html">Profile</a>
+    <a href="/settings.html">Change Password</a>
+    <a href="#" onclick="logout()">Logout</a>
+  </div>
+</div>
+
+<script>
+function toggleUserDropdown() {
+  const menu = document.getElementById("userDropdown");
+  menu.style.display = (menu.style.display === "block") ? "none" : "block";
+}
+
+function logout() {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+  window.location.href = "/login";
+}
+
+// Optional: show user name in tooltip or replace icon dynamically
+document.addEventListener("DOMContentLoaded", () => {
+  const token = localStorage.getItem("token");
+  if (!token) return;
+
+  fetch("/auth/profile", {
+    headers: { Authorization: "Bearer " + token }
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.username) {
+      document.querySelector(".user-dropdown-icon").title = data.firstname || data.username;
+    }
+  });
+});
+</script>
+
+</body>
+</html>

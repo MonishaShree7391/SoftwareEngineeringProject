@@ -1,0 +1,33 @@
+{
+  "shopName": "REWE",
+  "address": "Peterson Warenhandels GmbH&Co.KG, Sch\u00f6nwalder Stra\u00dfe 32 13585 Berlin/Spandau",
+  "invoiceNumber": "4749",
+  "totalSum": 7.03,
+  "items": [
+    {
+      "item": "VOLLKORNTORTILLA",
+      "quantity": 1,
+      "price": 1.29
+    },
+    {
+      "item": "HUEHNERNUDELTOPF",
+      "quantity": 1,
+      "price": 1.99
+    },
+    {
+      "item": "INST.NUD.GEMUESE",
+      "quantity": 4.0,
+      "unit_price": 0.69,
+      "price": 2.76
+    },
+    {
+      "item": "MELON MIN",
+      "quantity": 1,
+      "price": 0.99
+    }
+  ],
+  "date": "21.03.2025",
+  "billId": "R_21032025_B.pdf",
+  "month": "march",
+  "year": "2025"
+}

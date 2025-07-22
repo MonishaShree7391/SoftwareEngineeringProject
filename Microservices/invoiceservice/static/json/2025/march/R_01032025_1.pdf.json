@@ -1,0 +1,23 @@
+{
+  "shopName": "REWE",
+  "address": "Peterson Warenhandels GmbH&Co.KG, Sch\u00f6nwalder Stra\u00dfe 32 13585 Berlin/Spandau",
+  "invoiceNumber": "3353",
+  "totalSum": 3.68,
+  "items": [
+    {
+      "item": "BANANE CHIQUITA",
+      "quantity": 0.678,
+      "unit_price": 2.49,
+      "price": 1.69
+    },
+    {
+      "item": "CUORINO BLAETT.",
+      "quantity": 1,
+      "price": 1.99
+    }
+  ],
+  "date": "01.03.2025",
+  "billId": "R_01032025_1.pdf",
+  "month": "march",
+  "year": "2025"
+}

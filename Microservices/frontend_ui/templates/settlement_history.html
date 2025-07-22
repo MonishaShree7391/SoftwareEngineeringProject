@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Settlement History</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Bootstrap + Custom -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="/static/css/styles.css" />
+</head>
+<body class="bg-light">
+  <div class="container mt-5">
+    <!-- Logo Centered -->
+    <div class="text-center mb-4">
+      <img src="/static/images/LOGO_SiranthaRechnunSplit.jpg" alt="Logo" class="logo mb-3" style="max-width: 300px;">
+      <h2 class="text-muted">Settlement History</h2>
+    </div>
+
+    <!-- Table Section -->
+    <div class="card shadow">
+      <div class="card-body p-0">
+        <table class="table table-striped table-bordered m-0">
+          <thead class="thead-dark">
+            <tr>
+              <th>Reference #</th>
+              <th>Paid By</th>
+              <th>Owed By</th>
+              <th>Amount (€)</th>
+              <th>Method</th>
+              <th>Note</th>
+              <th>Timestamp</th>
+            </tr>
+          </thead>
+          <tbody id="log-table-body">
+            <tr><td colspan="7" class="text-center">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="text-center mt-4">
+      <a href="/balances.html" class="btn btn-secondary">← Back to Balances</a>
+    </div>
+  </div>
+
+  <!-- JavaScript -->
+  <script>
+    const token = localStorage.getItem("token");
+    if (!token) {
+      window.location.href = "/login";
+    }
+
+    fetch("/debt/settlement_log", {
+      headers: { "Authorization": "Bearer " + token }
+    })
+    .then(res => res.json())
+    .then(data => {
+      const tbody = document.getElementById("log-table-body");
+      tbody.innerHTML = "";
+
+      if (!Array.isArray(data)) {
+        tbody.innerHTML = "<tr><td colspan='7'>Failed to load data.</td></tr>";
+        console.error("Expected array, got:", data);
+        return;
+      }
+
+      if (data.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='7'>No settlement records found.</td></tr>";
+        return;
+      }
+
+      data.forEach(log => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>#${log.id ?? '-'}</td>
+          <td>${log.paid_by || '-'}</td>
+          <td>${log.owed_by || '-'}</td>
+          <td>${(log.amount ?? 0).toFixed(2)}</td>
+          <td>${log.method || '-'}</td>
+          <td>${log.note || '-'}</td>
+          <td>${new Date(log.timestamp).toLocaleString()}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    })
+    .catch(err => {
+      console.error("Error loading settlement log:", err);
+      document.getElementById("log-table-body").innerHTML = "<tr><td colspan='7'>Error loading data.</td></tr>";
+    });
+  </script>
+</body>
+</html>

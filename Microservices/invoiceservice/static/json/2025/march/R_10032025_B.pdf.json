@@ -1,0 +1,42 @@
+{
+  "shopName": "REWE",
+  "address": "Peterson Warenhandels GmbH&Co.KG, Sch\u00f6nwalder Stra\u00dfe 32 13585 Berlin/Spandau",
+  "invoiceNumber": "6497",
+  "totalSum": 6.99,
+  "items": [
+    {
+      "item": "NATURJOGHURT",
+      "quantity": 1,
+      "price": 1.79
+    },
+    {
+      "item": "JA! BUTTERGEMUES",
+      "quantity": 1,
+      "price": 0.99
+    },
+    {
+      "item": "COOKIE DOUGH",
+      "quantity": 1,
+      "price": 6.99
+    },
+    {
+      "item": "TRIPLE CHOC",
+      "quantity": 1,
+      "price": 1.59
+    },
+    {
+      "item": "INST.NUD.GEMUESE 2,07 B 3 Stk x",
+      "quantity": 1,
+      "price": 0.69
+    },
+    {
+      "item": "en+Jerry gratis -",
+      "quantity": 1,
+      "price": 6.99
+    }
+  ],
+  "date": "10.03.2025",
+  "billId": "R_10032025_B.pdf",
+  "month": "march",
+  "year": "2025"
+}

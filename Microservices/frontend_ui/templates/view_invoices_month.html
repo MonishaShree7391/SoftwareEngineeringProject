@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Invoices (SPA)</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <style>
+    body {
+      background-image: url('/static/images/View_bg.png');
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    .card {
+      background-color: #D7D8C5;
+      border: none;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+    .btn-home {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 999;
+    }
+  </style>
+</head>
+<body class="container">
+
+  <!-- Home Button -->
+  <div class="btn-home">
+    <a href="/index" class="btn btn-light border rounded px-3 py-1 shadow-sm" title="Go to Home">🏠 Home</a>
+  </div>
+
+  <h2>Invoices for <span id="month-label"></span> <span id="year-label"></span></h2>
+
+  <div id="invoice-container" class="row mt-4"></div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const token = localStorage.getItem("token");
+      console.log("inside view_invoice_month-TOKEN",token)
+      if (!token) {
+        alert("Session expired. Please log in again.");
+        window.location.href = "/login";
+        return;
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const month = params.get("month");
+      const year = params.get("year");
+      console.log("month and year: ",month, year)
+      document.getElementById("month-label").textContent = capitalize(month || "");
+      document.getElementById("year-label").textContent = year || "";
+
+      const container = document.getElementById("invoice-container");
+
+      fetch(`/invoice/view_invoices_by_month?month=${month}&year=${year}`, {
+        method: "GET",
+        headers: {
+          "Authorization": "Bearer " + token
+        }
+      })
+      .then(res => res.json())
+      .then(data => {
+        console.log("Invoice Year and Month data received:", data);
+        container.innerHTML = "";
+        if (!data.bills || data.bills.length === 0) {
+          container.innerHTML = "<p class='text-danger'>No invoices found.</p>";
+          return;
+        }
+
+        data.bills.forEach(bill => {
+          const card = document.createElement("div");
+          card.className = "col-md-6 mb-4";
+          card.innerHTML = `
+            <div class="card">
+              <div class="card-body">
+                <h5 class="card-title">Bill ID: ${bill.billId}</h5>
+                <p><strong>Shop:</strong> ${bill.shop}</p>
+                <p><strong>Date:</strong> ${bill.date}</p>
+                <p><strong>Total:</strong> €${bill.total.toFixed(2)}</p>
+                <a href="${bill.pdf_url}" target="_blank" class="btn btn-sm btn-secondary mb-2">View PDF</a>
+                <a href="/view?billId=${bill.billId}" class="btn btn-sm btn-primary">View Details</a>
+              </div>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      })
+      .catch(err => {
+        console.error("Error loading invoices:", err);
+        container.innerHTML = "<p class='text-danger'>Error loading invoices</p>";
+      });
+
+      function capitalize(word) {
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      }
+    });
+  </script>
+</body>
+</html>

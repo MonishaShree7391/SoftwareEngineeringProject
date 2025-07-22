@@ -1,0 +1,10 @@
+flask
+flask_sqlalchemy
+pymysql
+Flask-JWT-Extended
+Flask-Cors
+SQLAlchemy
+python-dotenv
+pyodbc
+flask_bcrypt
+requests

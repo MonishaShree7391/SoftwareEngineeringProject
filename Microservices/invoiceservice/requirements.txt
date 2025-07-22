@@ -1,0 +1,26 @@
+# Core Flask packages
+flask
+flask_sqlalchemy
+flask_jwt_extended
+flask_cors
+Flask-Bcrypt
+# Image & PDF processing
+pymupdf         # For reading PDFs (PyMuPDF)
+opencv-python   # For image preprocessing
+easyocr         # OCR engine
+# Data processing
+pandas
+numpy
+# HTTP requests (calling other services)
+requests
+
+# MySQL DB support (if used)
+pymysql
+
+# Optional logging improvement (recommended)
+python-dotenv   # For loading .env configs (optional)
+
+# Other helpful utilities
+werkzeug        # Already implied by Flask, but safe to list
+pillow
+pyodbc

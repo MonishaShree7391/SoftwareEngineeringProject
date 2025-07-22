@@ -1,0 +1,9 @@
+Flask
+Flask-Bcrypt
+Flask-JWT-Extended
+Flask-Cors
+Flask-SQLAlchemy
+pyodbc
+werkzeug
+python-dotenv
+sqlalchemy
